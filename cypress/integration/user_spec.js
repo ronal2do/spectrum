@@ -3,7 +3,7 @@ import data from '../../shared/testing/data';
 const user = data.users[0];
 
 describe('User View', () => {
-  before(() => {
+  beforeEach(() => {
     cy.visit(`/users/${user.username}`);
   });
 
@@ -21,13 +21,13 @@ describe('User View', () => {
       });
   });
 
-  it('should list the communities a user is a member of, including their rep in that community', () => {
+  it('should list the public communities a user is a member of, including their rep in that community', () => {
     const usersCommunities = data.usersCommunities.filter(
       ({ userId }) => userId === user.id
     );
     const communityIds = usersCommunities.map(({ communityId }) => communityId);
-    const communities = data.communities.filter(({ id }) =>
-      communityIds.includes(id)
+    const communities = data.communities.filter(
+      ({ id, isPrivate }) => communityIds.includes(id) && isPrivate !== true
     );
     communities.forEach(community => {
       cy.contains(community.name);

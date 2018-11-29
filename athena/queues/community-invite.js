@@ -4,19 +4,22 @@ import Raven from '../../shared/raven';
 import { fetchPayload } from '../utils/payloads';
 import { getUserPermissionsInCommunity } from '../models/usersCommunities';
 import { storeNotification } from '../models/notification';
-import { getUserByEmail } from '../models/user';
+import { getUserByEmail } from 'shared/db/queries/user';
 import createQueue from '../../shared/bull/create-queue';
-import { storeUsersNotifications } from '../models/usersNotifications';
+import { storeUsersNotifications } from 'shared/db/queries/usersNotifications';
+import { getCommunitySettings } from '../models/communitySettings';
 import { SEND_COMMUNITY_INVITE_EMAIL } from './constants';
 const sendCommunityInviteEmailQueue = createQueue(SEND_COMMUNITY_INVITE_EMAIL);
 import type {
   CommunityInviteNotificationJobData,
   Job,
 } from 'shared/bull/types';
+import { signCommunity, signUser } from 'shared/imgix';
 
 const addToSendCommunityInviteEmailQueue = (
   recipient,
   community,
+  communitySettings,
   sender,
   customMessage
 ) => {
@@ -29,8 +32,9 @@ const addToSendCommunityInviteEmailQueue = (
     {
       to: recipient.email,
       recipient,
-      sender,
-      community,
+      sender: signUser(sender),
+      community: signCommunity(community),
+      communitySettings,
       customMessage,
     },
     {
@@ -80,6 +84,7 @@ export default async (job: Job<CommunityInviteNotificationJobData>) => {
   const context = await fetchPayload('COMMUNITY', communityId);
 
   const communityToInvite = JSON.parse(context.payload);
+  const communitySettings = await getCommunitySettings(communityId);
   const sender = JSON.parse(actor.payload);
 
   // if the recipient of the email is not a member of spectrum, pass their information along to the email queue
@@ -88,11 +93,12 @@ export default async (job: Job<CommunityInviteNotificationJobData>) => {
     return addToSendCommunityInviteEmailQueue(
       inboundRecipient,
       communityToInvite,
+      communitySettings,
       sender,
       customMessage
     ).catch(err => {
+      debug(err);
       Raven.captureException(err);
-      console.log(err);
     });
   } else {
     // the user exists on spectrum
@@ -124,8 +130,12 @@ export default async (job: Job<CommunityInviteNotificationJobData>) => {
 
     const updatedNotification = await storeNotification(newNotification);
     const sendInvite = await addToSendCommunityInviteEmailQueue(
-      inboundRecipient,
+      {
+        ...inboundRecipient,
+        userId: existingUser.id,
+      },
       communityToInvite,
+      communitySettings,
       sender,
       customMessage
     );
@@ -142,7 +152,6 @@ export default async (job: Job<CommunityInviteNotificationJobData>) => {
       debug('❌ Error in job:\n');
       debug(err);
       Raven.captureException(err);
-      console.log(err);
     });
   }
 };

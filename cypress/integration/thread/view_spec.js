@@ -36,31 +36,38 @@ const blockedCommunityUser = data.usersCommunities.find(
 
 describe('sidebar components on thread view', () => {
   describe('non authed', () => {
-    before(() => {
+    beforeEach(() => {
       cy.visit(`/thread/${publicThread.id}`);
     });
 
     it('should render', () => {
       // loaded login upsell in sidebar
-      cy.get('[data-cy="thread-sidebar-login"]').should('be.visible');
-
-      // loaded community info
-      cy.get('[data-cy="thread-sidebar-community-info"]').should('be.visible');
-
-      // loaded join button which directs to login
-      cy
-        .get('[data-cy="thread-sidebar-join-login-button"]')
+      cy.get('[data-cy="thread-sidebar-login"]')
+        .scrollIntoView()
         .should('be.visible');
 
+      // loaded community info
+      cy.get('[data-cy="thread-sidebar-community-info"]')
+        .scrollIntoView()
+        .should('be.visible');
+
+      // loaded join button which directs to login
+      cy.get('[data-cy="thread-sidebar-join-login-button"]').should(
+        'be.visible'
+      );
+
       // loaded more conversations component
-      cy.get('[data-cy="thread-sidebar-more-threads"]').should('be.visible');
+      cy.get('[data-cy="thread-sidebar-more-threads"]')
+        .scrollIntoView()
+        .should('be.visible');
     });
   });
 
   describe('authed non member', () => {
-    before(() => {
-      cy.auth(nonMemberUser.id);
-      cy.visit(`/thread/${publicThread.id}`);
+    beforeEach(() => {
+      cy.auth(nonMemberUser.id).then(() =>
+        cy.visit(`/thread/${publicThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -68,22 +75,27 @@ describe('sidebar components on thread view', () => {
       cy.get('[data-cy="thread-sidebar-login"]').should('not.be.visible');
 
       // loaded community info
-      cy.get('[data-cy="thread-sidebar-community-info"]').should('be.visible');
+      cy.get('[data-cy="thread-sidebar-community-info"]')
+        .scrollIntoView()
+        .should('be.visible');
 
       // loaded join button which directs to login
-      cy
-        .get('[data-cy="thread-sidebar-join-community-button"]')
+      cy.get('[data-cy="thread-sidebar-join-community-button"]')
+        .scrollIntoView()
         .should('be.visible');
 
       // loaded more conversations component
-      cy.get('[data-cy="thread-sidebar-more-threads"]').should('be.visible');
+      cy.get('[data-cy="thread-sidebar-more-threads"]')
+        .scrollIntoView()
+        .should('be.visible');
     });
   });
 
   describe('authed member', () => {
-    before(() => {
-      cy.auth(memberInChannelUser.id);
-      cy.visit(`/thread/${publicThread.id}`);
+    beforeEach(() => {
+      cy.auth(memberInChannelUser.id).then(() =>
+        cy.visit(`/thread/${publicThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -91,22 +103,26 @@ describe('sidebar components on thread view', () => {
       cy.get('[data-cy="thread-sidebar-login"]').should('not.be.visible');
 
       // loaded community info
-      cy.get('[data-cy="thread-sidebar-community-info"]').should('be.visible');
+      cy.get('[data-cy="thread-sidebar-community-info"]')
+        .scrollIntoView()
+        .should('be.visible');
 
       // loaded join button which directs to login
-      cy
-        .get('[data-cy="thread-sidebar-view-community-button"]')
+      cy.get('[data-cy="thread-sidebar-view-community-button"]')
+        .scrollIntoView()
         .should('be.visible');
 
       // loaded more conversations component
-      cy.get('[data-cy="thread-sidebar-more-threads"]').should('be.visible');
+      cy.get('[data-cy="thread-sidebar-more-threads"]')
+        .scrollIntoView()
+        .should('be.visible');
     });
   });
 });
 
 describe('public thread', () => {
   describe('not authed', () => {
-    before(() => {
+    beforeEach(() => {
       cy.visit(`/thread/${publicThread.id}`);
     });
 
@@ -125,16 +141,17 @@ describe('public thread', () => {
       // thread author info loaded
       cy.contains(publicThreadAuthor.name);
       cy.contains(publicThreadAuthor.username);
-      cy
-        .get(`[href*="/users/${publicThreadAuthor.username}"]`)
-        .should('be.visible');
+      cy.get(`[href*="/users/${publicThreadAuthor.username}"]`).should(
+        'be.visible'
+      );
     });
   });
 
   describe('authed as non member', () => {
-    before(() => {
-      cy.auth(nonMemberUser.id);
-      cy.visit(`/thread/${publicThread.id}`);
+    beforeEach(() => {
+      cy.auth(nonMemberUser.id).then(() =>
+        cy.visit(`/thread/${publicThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -144,9 +161,10 @@ describe('public thread', () => {
   });
 
   describe('authed as member', () => {
-    before(() => {
-      cy.auth(memberInChannelUser.id);
-      cy.visit(`/thread/${publicThread.id}`);
+    beforeEach(() => {
+      cy.auth(memberInChannelUser.id).then(() =>
+        cy.visit(`/thread/${publicThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -155,9 +173,10 @@ describe('public thread', () => {
   });
 
   describe('authed as blocked channel user', () => {
-    before(() => {
-      cy.auth(blockedChannelUser.id);
-      cy.visit(`/thread/${publicThread.id}`);
+    beforeEach(() => {
+      cy.auth(blockedChannelUser.id).then(() =>
+        cy.visit(`/thread/${publicThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -167,9 +186,10 @@ describe('public thread', () => {
   });
 
   describe('authed as blocked community user', () => {
-    before(() => {
-      cy.auth(blockedCommunityUser.id);
-      cy.visit(`/thread/${publicThread.id}`);
+    beforeEach(() => {
+      cy.auth(blockedCommunityUser.id).then(() =>
+        cy.visit(`/thread/${publicThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -181,7 +201,7 @@ describe('public thread', () => {
 
 describe('private thread', () => {
   describe('not authed', () => {
-    before(() => {
+    beforeEach(() => {
       cy.visit(`/thread/${privateThread.id}`);
     });
 
@@ -193,9 +213,10 @@ describe('private thread', () => {
   });
 
   describe('authed as non member', () => {
-    before(() => {
-      cy.auth(nonMemberUser.id);
-      cy.visit(`/thread/${privateThread.id}`);
+    beforeEach(() => {
+      cy.auth(nonMemberUser.id).then(() =>
+        cy.visit(`/thread/${privateThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -205,9 +226,10 @@ describe('private thread', () => {
   });
 
   describe('authed as member', () => {
-    before(() => {
-      cy.auth(memberInChannelUser.id);
-      cy.visit(`/thread/${privateThread.id}`);
+    beforeEach(() => {
+      cy.auth(memberInChannelUser.id).then(() =>
+        cy.visit(`/thread/${privateThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -216,9 +238,10 @@ describe('private thread', () => {
   });
 
   describe('authed as blocked channel user', () => {
-    before(() => {
-      cy.auth(blockedChannelUser.id);
-      cy.visit(`/thread/${privateThread.id}`);
+    beforeEach(() => {
+      cy.auth(blockedChannelUser.id).then(() =>
+        cy.visit(`/thread/${privateThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -228,9 +251,10 @@ describe('private thread', () => {
   });
 
   describe('authed as blocked community user', () => {
-    before(() => {
-      cy.auth(blockedCommunityUser.id);
-      cy.visit(`/thread/${privateThread.id}`);
+    beforeEach(() => {
+      cy.auth(blockedCommunityUser.id).then(() =>
+        cy.visit(`/thread/${privateThread.id}`)
+      );
     });
 
     it('should render', () => {
@@ -242,7 +266,7 @@ describe('private thread', () => {
 
 describe('deleted thread', () => {
   describe('not authed', () => {
-    before(() => {
+    beforeEach(() => {
       cy.visit(`/thread/${deletedThread.id}`);
     });
 
@@ -253,9 +277,10 @@ describe('deleted thread', () => {
   });
 
   describe('authed', () => {
-    before(() => {
-      cy.auth(nonMemberUser.id);
-      cy.visit(`/thread/${deletedThread.id}`);
+    beforeEach(() => {
+      cy.auth(nonMemberUser.id).then(() =>
+        cy.visit(`/thread/${deletedThread.id}`)
+      );
     });
 
     it('should render', () => {

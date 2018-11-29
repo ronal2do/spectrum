@@ -6,8 +6,6 @@ import { Loading } from 'src/components/loading';
 import {
   PRO_USER_MAX_IMAGE_SIZE_STRING,
   PRO_USER_MAX_IMAGE_SIZE_BYTES,
-  FREE_USER_MAX_IMAGE_SIZE_BYTES,
-  FREE_USER_MAX_IMAGE_SIZE_STRING,
 } from 'src/helpers/images';
 
 type Props = {
@@ -15,56 +13,51 @@ type Props = {
   onError: Function,
   currentUser: ?Object,
   isSendingMediaMessage: boolean,
+  inputFocused: boolean,
 };
 
 class MediaUploader extends React.Component<Props> {
   form: any;
 
-  validateUpload = (validity: Object, file: ?Object) => {
+  validate = (validity: Object, file: ?Object) => {
     const { currentUser } = this.props;
 
-    if (!currentUser)
-      return this.props.onError('You must be signed in to upload images');
+    if (!currentUser) return 'You must be signed in to upload images';
     if (!file) return this.props.onError('');
     if (!validity.valid)
-      return this.props.onError(
-        "We couldn't validate this upload, please try uploading another file"
-      );
+      return "We couldn't validate this upload, please try uploading another file";
 
-    if (
-      file &&
-      file.size > FREE_USER_MAX_IMAGE_SIZE_BYTES &&
-      !currentUser.isPro
-    ) {
-      return this.props.onError(
-        `Upgrade to Pro to upload files up to ${PRO_USER_MAX_IMAGE_SIZE_STRING}. Otherwise, try uploading a photo less than ${FREE_USER_MAX_IMAGE_SIZE_STRING}.`
-      );
-    }
-
-    if (
-      file &&
-      file.size > PRO_USER_MAX_IMAGE_SIZE_BYTES &&
-      currentUser.isPro
-    ) {
-      return this.props.onError(
-        `Try uploading a file less than ${PRO_USER_MAX_IMAGE_SIZE_STRING}.`
-      );
+    if (file && file.size > PRO_USER_MAX_IMAGE_SIZE_BYTES) {
+      return `Try uploading a file less than ${PRO_USER_MAX_IMAGE_SIZE_STRING}.`;
     }
 
     // if it makes it this far, there is not an error we can detect
+    return null;
+  };
+
+  validatePreview = (validity: Object, file: ?Object) => {
+    const validationResult = this.validate(validity, file);
+    if (validationResult !== null) {
+      return this.props.onError(validationResult);
+    }
     this.props.onError('');
-    // send back the validated file
-    this.props.onValidated(file);
     // clear the form so that another image can be uploaded
-    return this.clearForm();
+    this.clearForm();
+    // send back the validated file
+    return this.props.onValidated(file);
   };
 
   onChange = (e: any) => {
-    const { target: { validity, files: [file] } } = e;
+    const {
+      target: {
+        validity,
+        files: [file],
+      },
+    } = e;
 
     if (!file) return;
 
-    return this.validateUpload(validity, file);
+    return this.validatePreview(validity, file);
   };
 
   clearForm = () => {
@@ -74,12 +67,32 @@ class MediaUploader extends React.Component<Props> {
   };
 
   componentDidMount() {
+    document.addEventListener('paste', this.onPaste, true);
     return this.clearForm();
   }
 
   componentWillUnmount() {
+    document.removeEventListener('paste', this.onPaste);
     return this.clearForm();
   }
+
+  onPaste = (event: any) => {
+    // Ensure that the image is only pasted if user focuses input
+    if (!event || !this.props.inputFocused) {
+      return;
+    }
+    const items = (event.clipboardData || event.originalEvent.clipboardData)
+      .items;
+    if (!items) {
+      return;
+    }
+    for (let item of items) {
+      if (item.kind === 'file' && item.type.includes('image/')) {
+        this.validatePreview({ valid: true }, item.getAsFile());
+        break;
+      }
+    }
+  };
 
   render() {
     const { isSendingMediaMessage } = this.props;

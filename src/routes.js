@@ -1,49 +1,41 @@
 // @flow
 import * as React from 'react';
+import compose from 'recompose/compose';
 import { Route, Switch, Redirect } from 'react-router';
 import styled, { ThemeProvider } from 'styled-components';
 import Loadable from 'react-loadable';
-import ErrorBoundary from 'react-error-boundary';
+import { ErrorBoundary } from 'src/components/error';
 import { CLIENT_URL } from './api/constants';
 import generateMetaInfo from 'shared/generate-meta-info';
 import './reset.css.js';
-import { theme } from './components/theme';
+import { theme } from 'shared/theme';
 import { FlexCol } from './components/globals';
-import ScrollManager from './components/scrollManager';
-import Head from './components/head';
-import ModalRoot from './components/modals/modalRoot';
-import Gallery from './components/gallery';
-import Toasts from './components/toasts';
-import Maintenance from './components/maintenance';
-import LoadingDMs from './views/directMessages/components/loading';
-import LoadingThread from './views/thread/components/loading';
-import { Loading, LoadingScreen } from './components/loading';
-import LoadingDashboard from './views/dashboard/components/dashboardLoading';
-import Composer from './components/composer';
-import signedOutFallback from './helpers/signed-out-fallback';
-import AuthViewHandler from './views/authViewHandler';
-import PrivateChannelJoin from './views/privateChannelJoin';
-import ThreadSlider from './views/threadSlider';
-import Navbar from './views/navbar';
-import Status from './views/status';
-import Login from './views/login';
-
-/* prettier-ignore */
-const DirectMessages = Loadable({
-  loader: () => import('./views/directMessages'/* webpackChunkName: "DirectMessages" */),
-  loading: ({ isLoading }) => isLoading && <LoadingDMs />,
-});
+import ScrollManager from 'src/components/scrollManager';
+import Head from 'src/components/head';
+import ModalRoot from 'src/components/modals/modalRoot';
+import Gallery from 'src/components/gallery';
+import Toasts from 'src/components/toasts';
+import { Loading, LoadingScreen } from 'src/components/loading';
+import Composer from 'src/components/composer';
+import AuthViewHandler from 'src/views/authViewHandler';
+import signedOutFallback from 'src/helpers/signed-out-fallback';
+import PrivateChannelJoin from 'src/views/privateChannelJoin';
+import PrivateCommunityJoin from 'src/views/privateCommunityJoin';
+import ThreadSlider from 'src/views/threadSlider';
+import Navbar from 'src/views/navbar';
+import Status from 'src/views/status';
+import Login from 'src/views/login';
+import DirectMessages from 'src/views/directMessages';
+import { FullscreenThreadView } from 'src/views/thread';
+import ThirdPartyContext from 'src/components/thirdPartyContextSetting';
+import { withCurrentUser } from 'src/components/withCurrentUser';
+import type { GetUserType } from 'shared/graphql/queries/user/getUser';
+import RedirectOldThreadRoute from './views/thread/redirect-old-route';
 
 /* prettier-ignore */
 const Explore = Loadable({
   loader: () => import('./views/explore'/* webpackChunkName: "Explore" */),
   loading: ({ isLoading }) => isLoading && <Loading />,
-});
-
-/* prettier-ignore */
-const Thread = Loadable({
-  loader: () => import('./views/thread'/* webpackChunkName: "Thread" */),
-  loading: ({ isLoading }) => isLoading && <LoadingThread />,
 });
 
 /* prettier-ignore */
@@ -73,7 +65,7 @@ const ChannelView = Loadable({
 /* prettier-ignore */
 const Dashboard = Loadable({
   loader: () => import('./views/dashboard'/* webpackChunkName: "Dashboard" */),
-  loading: ({ isLoading }) => isLoading && <LoadingDashboard />,
+  loading: ({ isLoading }) => isLoading && null,
 });
 
 /* prettier-ignore */
@@ -128,61 +120,52 @@ const Body = styled(FlexCol)`
   display: flex;
   width: 100vw;
   height: 100vh;
-  background: ${props => props.theme.bg.wash};
-
-  @media (max-width: 768px) {
-    height: 100vh;
-    max-height: 100vh;
-  }
+  max-height: 100vh;
+  background: ${theme.bg.wash};
 `;
 
 const DashboardFallback = signedOutFallback(Dashboard, Pages);
 const HomeFallback = signedOutFallback(Dashboard, () => <Redirect to="/" />);
+const LoginFallback = signedOutFallback(() => <Redirect to="/" />, Login);
+const CommunityLoginFallback = signedOutFallback(
+  props => <Redirect to={`/${props.match.params.communitySlug}`} />,
+  CommunityLoginView
+);
 const NewCommunityFallback = signedOutFallback(NewCommunity, () => (
-  <Redirect to={`/login?r=${CLIENT_URL}/new/community`} />
+  <Login redirectPath={`${CLIENT_URL}/new/community`} />
 ));
 const MessagesFallback = signedOutFallback(DirectMessages, () => (
-  <Redirect to="/login" />
+  <Login redirectPath={`${CLIENT_URL}/messages`} />
 ));
 const UserSettingsFallback = signedOutFallback(UserSettings, () => (
-  <Redirect to="/login" />
+  <Login redirectPath={`${CLIENT_URL}/me/settings`} />
 ));
 const CommunitySettingsFallback = signedOutFallback(CommunitySettings, () => (
-  <Redirect to="/login" />
+  <Login />
 ));
 const ChannelSettingsFallback = signedOutFallback(ChannelSettings, () => (
-  <Redirect to="/login" />
+  <Login />
 ));
 const NotificationsFallback = signedOutFallback(Notifications, () => (
-  <Redirect to="/login" />
+  <Login redirectPath={`${CLIENT_URL}/notifications`} />
 ));
 const ComposerFallback = signedOutFallback(Composer, () => (
-  <Redirect to="/login" />
+  <Login redirectPath={`${CLIENT_URL}/new/thread`} />
 ));
 
-class Routes extends React.Component<{}> {
-  render() {
-    const { title, description } = generateMetaInfo();
+type Props = {
+  currentUser: ?GetUserType,
+  isLoadingCurrentUser: boolean,
+};
 
-    if (this.props.maintenanceMode) {
-      return (
-        <ThemeProvider theme={theme}>
-          <ScrollManager>
-            <Body>
-              <Head
-                title="Ongoing Maintenance - Spectrum"
-                description="Spectrum is currently undergoing scheduled maintenance downtime. Please check https://twitter.com/withspectrum for ongoing updates."
-              />
-              <Maintenance />
-            </Body>
-          </ScrollManager>
-        </ThemeProvider>
-      );
-    }
+class Routes extends React.Component<Props> {
+  render() {
+    const { currentUser, isLoadingCurrentUser } = this.props;
+    const { title, description } = generateMetaInfo();
 
     return (
       <ThemeProvider theme={theme}>
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <ErrorBoundary fallbackComponent={ErrorFallback}>
           <ScrollManager>
             <Body>
               {/* Default meta tags, get overriden by anything further down the tree */}
@@ -193,7 +176,8 @@ class Routes extends React.Component<{}> {
                 things like the 'set username' prompt when a user auths and doesn't
                 have a username set.
               */}
-              <Route component={AuthViewHandler} />
+              <AuthViewHandler>{() => null}</AuthViewHandler>
+              <ThirdPartyContext />
               <Status />
               <Route component={Navbar} />
 
@@ -203,9 +187,9 @@ class Routes extends React.Component<{}> {
               <Route component={ThreadSlider} />
 
               {/*
-                Switch only renders the first match. Subrouting happens downstream
-                https://reacttraining.com/react-router/web/api/Switch
-              */}
+                  Switch only renders the first match. Subrouting happens downstream
+                  https://reacttraining.com/react-router/web/api/Switch
+                */}
               <Switch>
                 <Route exact path="/" component={DashboardFallback} />
                 <Route exact path="/home" component={HomeFallback} />
@@ -218,9 +202,10 @@ class Routes extends React.Component<{}> {
                 <Route path="/terms.html" component={Pages} />
                 <Route path="/privacy.html" component={Pages} />
                 <Route path="/code-of-conduct" component={Pages} />
-                <Route path="/pricing" component={Pages} />
                 <Route path="/support" component={Pages} />
                 <Route path="/features" component={Pages} />
+                <Route path="/faq" component={Pages} />
+                <Route path="/apps" component={Pages} />
 
                 {/* App Pages */}
                 <Route path="/new/community" component={NewCommunityFallback} />
@@ -232,7 +217,7 @@ class Routes extends React.Component<{}> {
                   render={() => <Redirect to="/new/community" />}
                 />
 
-                <Route path="/login" component={Login} />
+                <Route path="/login" component={LoginFallback} />
                 <Route path="/explore" component={Explore} />
                 <Route path="/messages/new" component={MessagesFallback} />
                 <Route
@@ -240,7 +225,10 @@ class Routes extends React.Component<{}> {
                   component={MessagesFallback}
                 />
                 <Route path="/messages" component={MessagesFallback} />
-                <Route path="/thread/:threadId" component={Thread} />
+                <Route
+                  path="/thread/:threadId"
+                  component={RedirectOldThreadRoute}
+                />
                 <Route path="/thread" render={() => <Redirect to="/" />} />
                 <Route exact path="/users" render={() => <Redirect to="/" />} />
                 <Route exact path="/users/:username" component={UserView} />
@@ -254,11 +242,34 @@ class Routes extends React.Component<{}> {
                   component={NotificationsFallback}
                 />
 
+                <Route
+                  path="/me/settings"
+                  render={() =>
+                    currentUser && currentUser.username ? (
+                      <Redirect
+                        to={`/users/${currentUser.username}/settings`}
+                      />
+                    ) : isLoadingCurrentUser ? null : (
+                      <Login redirectPath={`${CLIENT_URL}/me/settings`} />
+                    )
+                  }
+                />
+                <Route
+                  path="/me"
+                  render={() =>
+                    currentUser && currentUser.username ? (
+                      <Redirect to={`/users/${currentUser.username}`} />
+                    ) : isLoadingCurrentUser ? null : (
+                      <Login redirectPath={`${CLIENT_URL}/me`} />
+                    )
+                  }
+                />
+
                 {/*
-                  We check communitySlug last to ensure none of the above routes
-                  pass. We handle null communitySlug values downstream by either
-                  redirecting to home or showing a 404
-                */}
+                    We check communitySlug last to ensure none of the above routes
+                    pass. We handle null communitySlug values downstream by either
+                    redirecting to home or showing a 404
+                  */}
                 <Route
                   path="/:communitySlug/:channelSlug/settings"
                   component={ChannelSettingsFallback}
@@ -276,8 +287,22 @@ class Routes extends React.Component<{}> {
                   component={CommunitySettingsFallback}
                 />
                 <Route
+                  path="/:communitySlug/join/:token"
+                  component={PrivateCommunityJoin}
+                />
+                <Route
                   path="/:communitySlug/login"
-                  component={CommunityLoginView}
+                  component={CommunityLoginFallback}
+                />
+                <Route
+                  // NOTE(@mxstbr): This custom path regexp matches threadId correctly in all cases, no matter if we prepend it with a custom slug or not.
+                  // Imagine our threadId is "id-123-id" (similar in shape to an actual UUID)
+                  // - /id-123-id => id-123-id, easy start that works
+                  // - /some-custom-slug~id-123-id => id-123-id, custom slug also works
+                  // - /~id-123-id => id-123-id => id-123-id, empty custom slug also works
+                  // - /some~custom~slug~id-123-id => id-123-id, custom slug with delimiter char in it (~) also works! :tada:
+                  path="/:communitySlug/:channelSlug/(.*~)?:threadId"
+                  component={FullscreenThreadView}
                 />
                 <Route
                   path="/:communitySlug/:channelSlug"
@@ -293,4 +318,4 @@ class Routes extends React.Component<{}> {
   }
 }
 
-export default Routes;
+export default compose(withCurrentUser)(Routes);

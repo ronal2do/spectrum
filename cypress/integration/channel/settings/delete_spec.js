@@ -20,17 +20,13 @@ const { userId: ownerInPrivateChannelId } = data.usersChannels.find(
 );
 
 describe('deleting general channel', () => {
-  before(() => {
-    cy.auth(ownerInChannelId);
-    cy.visit(`/${community.slug}/${channel.slug}`);
+  beforeEach(() => {
+    cy.auth(ownerInChannelId).then(() =>
+      cy.visit(`/${community.slug}/${channel.slug}/settings`)
+    );
   });
 
   it('should not allow general channel to be deleted', () => {
-    cy
-      .get('[data-cy="channel-settings-button"]')
-      .should('be.visible')
-      .click();
-
     cy.get('[data-cy="channel-overview"]').should('be.visible');
 
     cy.get('[data-cy="delete-channel-button"]').should('not.be.visible');
@@ -38,21 +34,16 @@ describe('deleting general channel', () => {
 });
 
 describe('deleting a channel', () => {
-  before(() => {
-    cy.auth(ownerInPrivateChannelId);
-    cy.visit(`/${privateCommunity.slug}/${privateChannel.slug}`);
+  beforeEach(() => {
+    cy.auth(ownerInPrivateChannelId).then(() =>
+      cy.visit(`/${privateCommunity.slug}/${privateChannel.slug}/settings`)
+    );
   });
 
   it('should delete a channel', () => {
-    cy
-      .get('[data-cy="channel-settings-button"]')
-      .should('be.visible')
-      .click();
-
     cy.get('[data-cy="channel-overview"]').should('be.visible');
 
-    cy
-      .get('[data-cy="delete-channel-button"]')
+    cy.get('[data-cy="delete-channel-button"]')
       .should('be.visible')
       .click();
 

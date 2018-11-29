@@ -1,11 +1,18 @@
 // @flow
+import theme from 'shared/theme';
 import React from 'react';
 import styled from 'styled-components';
+import { connect } from 'react-redux';
 import Link from 'src/components/link';
-import Dropdown from '../../../components/dropdown';
-import { SERVER_URL } from '../../../api/constants';
+import Dropdown from 'src/components/dropdown';
+import { SERVER_URL } from 'src/api/constants';
+import type { UserInfoType } from 'shared/graphql/fragments/user/userInfo';
+import { isMac } from 'src/helpers/is-os';
+import { isDesktopApp } from 'src/helpers/desktop-app-utils';
 
-const UserProfileDropdown = styled(Dropdown)`width: 200px;`;
+const UserProfileDropdown = styled(Dropdown)`
+  width: 200px;
+`;
 
 const UserProfileDropdownList = styled.ul`
   list-style-type: none;
@@ -25,44 +32,74 @@ const UserProfileDropdownListItem = styled.li`
   flex: 1;
   font-size: 14px;
   font-weight: 600;
-  color: ${props => props.theme.text.alt};
-  border-bottom: 2px solid ${props => props.theme.bg.border};
-  background: ${props => props.theme.bg.default};
+  color: ${theme.text.alt};
+  border-bottom: 2px solid ${theme.bg.border};
+  background: ${theme.bg.default};
   justify-content: center;
 
   &:hover {
     cursor: pointer;
-    color: ${props => props.theme.text.default};
-    background: ${props => props.theme.bg.wash};
+    color: ${theme.text.default};
+    background: ${theme.bg.wash};
   }
 `;
 
-type ProfileProps = Object;
+type ProfileProps = {
+  user: UserInfoType,
+  dispatch: Function,
+};
 
-export const ProfileDropdown = (props: ProfileProps) => {
-  return (
-    <UserProfileDropdown className={'dropdown'}>
-      <UserProfileDropdownList>
-        {props.user.username && (
-          <Link rel="nofollow" to={`/users/${props.user.username}/settings`}>
+type State = {
+  didMount: boolean,
+};
+
+class ProfileDropdown extends React.Component<ProfileProps, State> {
+  state = { didMount: false };
+
+  componentDidMount() {
+    return this.setState({ didMount: true });
+  }
+
+  render() {
+    const { props } = this;
+    const { didMount } = this.state;
+    return (
+      <UserProfileDropdown className={'dropdown'}>
+        <UserProfileDropdownList>
+          {props.user.username && (
+            <Link rel="nofollow" to={`/users/${props.user.username}/settings`}>
+              <UserProfileDropdownListItem>
+                My Settings
+              </UserProfileDropdownListItem>
+            </Link>
+          )}
+
+          {didMount &&
+            isMac() &&
+            !isDesktopApp() && (
+              <Link to={`/apps`}>
+                <UserProfileDropdownListItem>
+                  Desktop App
+                </UserProfileDropdownListItem>
+              </Link>
+            )}
+
+          <Link to={`/about`}>
             <UserProfileDropdownListItem>
-              My Settings
+              About Spectrum
             </UserProfileDropdownListItem>
           </Link>
-        )}
-        <Link to={`/about`}>
-          <UserProfileDropdownListItem>
-            About Spectrum
-          </UserProfileDropdownListItem>
-        </Link>
-        <Link to={`/support`}>
-          <UserProfileDropdownListItem>Support</UserProfileDropdownListItem>
-        </Link>
+          <Link to={`/support`}>
+            <UserProfileDropdownListItem>Support</UserProfileDropdownListItem>
+          </Link>
 
-        <a href={`${SERVER_URL}/auth/logout`}>
-          <UserProfileDropdownListItem>Log Out</UserProfileDropdownListItem>
-        </a>
-      </UserProfileDropdownList>
-    </UserProfileDropdown>
-  );
-};
+          <a href={`${SERVER_URL}/auth/logout`}>
+            <UserProfileDropdownListItem>Log Out</UserProfileDropdownListItem>
+          </a>
+        </UserProfileDropdownList>
+      </UserProfileDropdown>
+    );
+  }
+}
+
+export default connect()(ProfileDropdown);

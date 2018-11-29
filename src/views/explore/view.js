@@ -1,11 +1,13 @@
 // @flow
+import theme from 'shared/theme';
 import * as React from 'react';
 import styled from 'styled-components';
 import { connect } from 'react-redux';
 import compose from 'recompose/compose';
-import { CommunityProfile } from '../../components/profile';
+import { CommunityProfile } from 'src/components/profile';
 import { collections } from './collections';
-import viewNetworkHandler from '../../components/viewNetworkHandler';
+import viewNetworkHandler from 'src/components/viewNetworkHandler';
+import { withCurrentUser } from 'src/components/withCurrentUser';
 import {
   ListWithTitle,
   ListTitle,
@@ -15,18 +17,32 @@ import {
   CollectionWrapper,
   LoadingContainer,
 } from './style';
-import { getCommunitiesByCuratedContentType } from 'shared/graphql/queries/community/getCommunities';
+import { getCommunitiesBySlug } from 'shared/graphql/queries/community/getCommunities';
 import type { GetCommunitiesType } from 'shared/graphql/queries/community/getCommunities';
-import { Loading } from '../../components/loading';
-import { SegmentedControl, Segment } from '../../components/segmentedControl';
+import { Loading } from 'src/components/loading';
+import { SegmentedControl, Segment } from 'src/components/segmentedControl';
+import { track, transformations, events } from 'src/helpers/analytics';
+import { ErrorBoundary } from 'src/components/error';
+
+const ChartGrid = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: auto;
+`;
+
+const ThisSegment = styled(Segment)`
+  @media (max-width: 768px) {
+    &:first-of-type {
+      color: ${theme.text.alt};
+      border-bottom: 2px solid ${theme.bg.border};
+    }
+    &:not(:first-of-type) {
+      display: none;
+    }
+  }
+`;
 
 export const Charts = () => {
-  const ChartGrid = styled.div`
-    display: flex;
-    flex-direction: column;
-    flex: auto;
-  `;
-
   return <ChartGrid>{collections && <CollectionSwitcher />}</ChartGrid>;
 };
 
@@ -42,22 +58,15 @@ class CollectionSwitcher extends React.Component<Props, State> {
 
   handleSegmentClick(selectedView) {
     if (this.state.selectedView === selectedView) return;
+
+    track(events.EXPLORE_PAGE_SUBCATEGORY_VIEWED, {
+      collection: selectedView,
+    });
+
     return this.setState({ selectedView });
   }
 
   render() {
-    const ThisSegment = styled(Segment)`
-      @media (max-width: 768px) {
-        &:first-of-type {
-          color: ${props => props.theme.text.alt};
-          border-bottom: 2px solid ${props => props.theme.bg.border};
-        }
-        &:not(:first-of-type) {
-          display: none;
-        }
-      }
-    `;
-
     return (
       <Collections>
         <SegmentedControl>
@@ -78,11 +87,19 @@ class CollectionSwitcher extends React.Component<Props, State> {
 
         <CollectionWrapper>
           {collections.map((collection, index) => {
+            // NOTE(@mxstbr): [].concat.apply([], ...) flattens the array
+            const communitySlugs = collection.categories
+              ? [].concat.apply(
+                  [],
+                  collection.categories.map(({ communities }) => communities)
+                )
+              : collection.communities || [];
             return (
               <CategoryWrapper key={index}>
                 {collection.curatedContentType === this.state.selectedView && (
                   <Category
                     categories={collection.categories}
+                    slugs={communitySlugs}
                     curatedContentType={collection.curatedContentType}
                   />
                 )}
@@ -106,6 +123,18 @@ type CategoryListProps = {
   categories?: Array<any>,
 };
 class CategoryList extends React.Component<CategoryListProps> {
+  onLeave = community => {
+    track(events.EXPLORE_PAGE_LEFT_COMMUNITY, {
+      community: transformations.analyticsCommunity(community),
+    });
+  };
+
+  onJoin = community => {
+    track(events.EXPLORE_PAGE_JOINED_COMMUNITY, {
+      community: transformations.analyticsCommunity(community),
+    });
+  };
+
   render() {
     const {
       data: { communities },
@@ -133,12 +162,16 @@ class CategoryList extends React.Component<CategoryListProps> {
             <ListWrapper>
               {filteredCommunities.map((community, i) => (
                 // $FlowFixMe
-                <CommunityProfile
-                  key={i}
-                  profileSize={'upsell'}
-                  data={{ community }}
-                  currentUser={currentUser}
-                />
+                <ErrorBoundary fallbackComponent={null} key={i}>
+                  <CommunityProfile
+                    profileSize={'upsell'}
+                    data={{ community }}
+                    currentUser={currentUser}
+                    onLeave={this.onLeave}
+                    onJoin={this.onJoin}
+                    showHoverProfile={false}
+                  />
+                </ErrorBoundary>
               ))}
             </ListWrapper>
           </ListWithTitle>
@@ -161,12 +194,15 @@ class CategoryList extends React.Component<CategoryListProps> {
                 <ListWrapper>
                   {filteredCommunities.map((community, i) => (
                     // $FlowFixMe
-                    <CommunityProfile
-                      key={i}
-                      profileSize={'upsell'}
-                      data={{ community }}
-                      currentUser={currentUser}
-                    />
+                    <ErrorBoundary fallbackComponent={null}>
+                      <CommunityProfile
+                        key={i}
+                        profileSize={'upsell'}
+                        data={{ community }}
+                        currentUser={currentUser}
+                        showHoverProfile={false}
+                      />
+                    </ErrorBoundary>
                   ))}
                 </ListWrapper>
               </ListWithTitle>
@@ -188,10 +224,9 @@ class CategoryList extends React.Component<CategoryListProps> {
   }
 }
 
-const map = state => ({ currentUser: state.users.currentUser });
 export const Category = compose(
-  // $FlowIssue
-  connect(map),
-  getCommunitiesByCuratedContentType,
-  viewNetworkHandler
+  withCurrentUser,
+  getCommunitiesBySlug,
+  viewNetworkHandler,
+  connect()
 )(CategoryList);

@@ -1,4 +1,5 @@
 import { getMessageById } from '../../models/message';
+import { signImageUrl } from 'shared/imgix';
 
 export default async replies => {
   let newReplies = [];
@@ -9,7 +10,7 @@ export default async replies => {
 
   // get all the messages for this thread
   const messageRecords = await Promise.all(replyPromises).catch(err =>
-    console.log('error getting reply promises', err)
+    console.error('error getting reply promises', err)
   );
 
   // filter deleted ones and sort them by recency
@@ -21,8 +22,9 @@ export default async replies => {
     const reply = replies.filter(r => r.id === message.id)[0];
     const body =
       message.messageType === 'media'
-        ? `<p class='reply-img-container'><img class='reply-img' src='${reply
-            .content.body}?w=600&dpr=2' /></p>`
+        ? `<p class='reply-img-container'><img class='reply-img' src='${signImageUrl(
+            reply.content.body
+          )}' /></p>`
         : `<p class='reply'>${reply.content.body}</p>`;
 
     const newGroup = {
@@ -47,5 +49,5 @@ export default async replies => {
 
   return await Promise.all([filteredPromises])
     .then(() => newReplies)
-    .catch(err => console.log('error getting filteredPromises', err));
+    .catch(err => console.error('error getting filteredPromises', err));
 };

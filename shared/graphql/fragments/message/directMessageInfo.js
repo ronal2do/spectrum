@@ -7,9 +7,23 @@ export type DirectMessageInfoType = {
   id: string,
   timestamp: Date,
   messageType: string,
+  modifiedAt: string,
   author: {
     user: {
       ...$Exact<UserInfoType>,
+    },
+  },
+  parent: {
+    id: string,
+    timestamp: Date,
+    messageType: string,
+    author: {
+      user: {
+        ...$Exact<UserInfoType>,
+      },
+    },
+    content: {
+      body: string,
     },
   },
   reactions: {
@@ -26,9 +40,23 @@ export default gql`
     id
     timestamp
     messageType
+    modifiedAt
     author {
       user {
         ...userInfo
+      }
+    }
+    parent {
+      id
+      timestamp
+      messageType
+      author {
+        user {
+          ...userInfo
+        }
+      }
+      content {
+        body
       }
     }
     reactions {

@@ -1,4 +1,5 @@
 // @flow
+import theme from 'shared/theme';
 // $FlowFixMe
 import styled from 'styled-components';
 // $FlowFixMe
@@ -20,15 +21,19 @@ import {
 import Card from '../../components/card';
 import { StyledCard } from '../../components/listItems/style';
 import Icon from '../../components/icons';
-import Avatar from '../../components/avatar';
+import { CommunityAvatar } from '../../components/avatar';
 import ScrollRow from '../../components/scrollRow';
 
 import { Button } from '../../components/buttons';
 
-export const Wrapper = styled(FlexCol)`
+export const Wrapper = styled.main`
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
   flex: 1 0 auto;
   width: 100%;
-  background-color: ${({ theme }) => theme.bg.default};
+  background-color: ${theme.bg.default};
   overflow: auto;
   overflow-x: hidden;
   z-index: ${zIndex.base};
@@ -40,7 +45,7 @@ export const ViewTitle = styled(H1)`
   margin-top: 48px;
   font-size: 32px;
   font-weight: 900;
-  color: ${({ theme }) => theme.text.reverse};
+  color: ${theme.text.reverse};
   position: relative;
   z-index: ${zIndex.base};
 
@@ -52,7 +57,7 @@ export const ViewTitle = styled(H1)`
 
 export const ViewSubtitle = styled(H2)`
   margin-left: 48px;
-  color: ${({ theme }) => theme.text.reverse};
+  color: ${theme.text.reverse};
   position: relative;
   z-index: ${zIndex.base};
 
@@ -100,7 +105,7 @@ export const ViewHeader = styled(Section)`
   flex: none;
   padding: 120px 0 0 0;
   justify-content: flex-end;
-  background-color: ${({ theme }) => theme.space.dark};
+  background-color: ${theme.space.dark};
   background-image: ${({ theme }) =>
     `radial-gradient(farthest-corner at 50% 100%, ${hexa(
       theme.brand.alt,
@@ -122,7 +127,7 @@ export const SectionWithGradientTransition = styled(Section)`
 `;
 
 export const SectionTitle = styled(H2)`
-  color: ${({ theme }) => theme.text.default};
+  color: ${theme.text.default};
   margin-left: 16px;
   font-size: 32px;
   margin-bottom: 16px;
@@ -134,7 +139,7 @@ export const SectionTitle = styled(H2)`
 `;
 
 export const SectionSubtitle = styled(H3)`
-  color: ${({ theme }) => theme.text.default};
+  color: ${theme.text.default};
   margin-bottom: 8px;
   margin-left: 48px;
 
@@ -165,8 +170,8 @@ export const Item = styled(FlexCol)`
   padding: 16px;
   flex: 0 0 280px;
   flex-order: ${props => (props.active ? '2' : '1')};
-  background-color: ${({ theme }) => theme.bg.default};
-  color: ${({ theme }) => theme.text.default};
+  background-color: ${theme.bg.default};
+  color: ${theme.text.default};
   border-radius: 16px;
   margin-right: 24px;
   justify-content: space-between;
@@ -176,8 +181,7 @@ export const Item = styled(FlexCol)`
   transition: ${Transition.hover.off};
 
   &:hover {
-    box-shadow: ${Shadow.high} ${props =>
-        hexa(props.theme.text.placeholder, 1)};
+    box-shadow: ${Shadow.high} ${props => hexa(props.theme.text.placeholder, 1)};
     transition: ${Transition.hover.on};
     opacity: 1;
   }
@@ -185,17 +189,17 @@ export const Item = styled(FlexCol)`
 
 export const ItemTitle = styled(H2)`
   font-weight: 700;
-  color: ${({ theme }) => theme.text.default};
+  color: ${theme.text.default};
 `;
 
 export const ItemCopy = styled(P)`
-  color: ${({ theme }) => theme.text.default};
+  color: ${theme.text.default};
   margin: 8px 0;
 `;
 
 export const ItemMeta = styled(ItemCopy)`
   font-weight: 900;
-  color: ${({ theme }) => theme.text.placeholder};
+  color: ${theme.text.placeholder};
 `;
 
 export const ButtonContainer = styled(FlexRow)`
@@ -209,7 +213,7 @@ export const ButtonContainer = styled(FlexRow)`
 
 export const ItemButton = styled(Button)`
   font-weight: 700;
-  color: ${({ theme }) => theme.text.reverse};
+  color: ${theme.text.reverse};
   background-color: ${props =>
     props.joined ? props.theme.bg.inactive : props.theme.brand.default};
   background-image: ${props =>
@@ -263,6 +267,7 @@ export const SearchWrapper = styled(Card)`
   box-shadow: ${Shadow.low} ${props => hexa(props.theme.bg.reverse, 0.15)};
   transition: ${Transition.hover.off};
   z-index: ${zIndex.search};
+  border-radius: 8px;
 
   &:hover {
     box-shadow: ${Shadow.high} ${props => hexa(props.theme.bg.reverse, 0.25)};
@@ -272,7 +277,7 @@ export const SearchWrapper = styled(Card)`
 
 export const SearchInputWrapper = styled(FlexRow)`
   flex: auto;
-  color: ${props => props.theme.text.placeholder};
+  color: ${theme.text.placeholder};
 `;
 
 export const SearchIcon = styled(Icon)``;
@@ -309,7 +314,7 @@ export const SearchResultsDropdown = styled.ul`
   flex: auto;
   max-height: 400px;
   overflow-y: auto;
-  background: ${props => props.theme.bg.default};
+  background: ${theme.bg.default};
 
   @media (max-width: 768px) {
     border-radius: 0 0 8px 8px;
@@ -330,15 +335,15 @@ export const SearchResult = styled.li`
     ${props => (props.focused ? 'transparent' : props.theme.bg.border)};
 
   &:hover {
-    background: ${props => props.theme.brand.alt};
+    background: ${theme.brand.alt};
     cursor: pointer;
 
     h2 {
-      color: ${props => props.theme.text.reverse};
+      color: ${theme.text.reverse};
     }
 
     p {
-      color: ${props => props.theme.text.reverse};
+      color: ${theme.text.reverse};
     }
   }
 
@@ -368,9 +373,11 @@ export const SearchLink = styled(Link)`
   ${Truncate()} padding: 8px 16px 8px 8px;
 `;
 
-export const SearchResultImage = styled(Avatar)``;
+export const SearchResultImage = styled(CommunityAvatar)``;
 
-export const SearchResultMetaWrapper = styled(FlexCol)`margin-left: 16px;`;
+export const SearchResultMetaWrapper = styled(FlexCol)`
+  margin-left: 16px;
+`;
 
 export const SearchResultName = styled.h2`
   font-size: 16px;
@@ -390,14 +397,14 @@ export const SearchResultNull = styled.div`
   justify-content: center;
   align-items: center;
   padding: 24px;
-  background-color: ${props => props.theme.bg.default};
+  background-color: ${theme.bg.default};
   border: 0;
 
   &:hover {
     border: 0;
 
     p {
-      color: ${props => props.theme.text.alt};
+      color: ${theme.text.alt};
     }
   }
 
@@ -409,17 +416,19 @@ export const SearchResultNull = styled.div`
     text-align: center;
     font-size: 14px;
     font-weight: 400;
-    color: ${props => props.theme.text.alt};
+    color: ${theme.text.alt};
     text-align: center;
     font-size: 18px;
     font-weight: 600;
   }
 `;
 
-export const ListWithTitle = styled(FlexCol)`flex: auto;`;
+export const ListWithTitle = styled(FlexCol)`
+  flex: auto;
+`;
 
 export const ListTitle = styled(H2)`
-  border-bottom: 1px solid ${props => props.theme.bg.border};
+  border-bottom: 1px solid ${theme.bg.border};
   padding-bottom: 8px;
   padding-left: 16px;
   font-weight: 500;
@@ -463,4 +472,6 @@ export const CategoryWrapper = styled.div`
   flex: none;
 `;
 
-export const LoadingContainer = styled.div`padding: 32px;`;
+export const LoadingContainer = styled.div`
+  padding: 32px;
+`;

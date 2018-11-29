@@ -8,6 +8,8 @@ import CommunityLogin from 'src/views/communityLogin';
 import AppViewWrapper from 'src/components/appViewWrapper';
 import { Loading } from 'src/components/loading';
 import { CLIENT_URL } from 'src/api/constants';
+import type { Dispatch } from 'redux';
+import { withCurrentUser } from 'src/components/withCurrentUser';
 
 type Props = {
   match: Object,
@@ -15,7 +17,7 @@ type Props = {
   history: Object,
   joinChannelWithToken: Function,
   currentUser: Object,
-  dispatch: Function,
+  dispatch: Dispatch<Object>,
 };
 
 type State = {
@@ -73,7 +75,9 @@ class PrivateChannelJoin extends React.Component<Props, State> {
     const { currentUser, match } = this.props;
     const { isLoading } = this.state;
 
-    const { params: { communitySlug, channelSlug, token } } = match;
+    const {
+      params: { communitySlug, channelSlug, token },
+    } = match;
 
     const redirectPath = `${CLIENT_URL}/${communitySlug}/${channelSlug}/join/${token}`;
 
@@ -93,6 +97,8 @@ class PrivateChannelJoin extends React.Component<Props, State> {
   }
 }
 
-const map = state => ({ currentUser: state.users.currentUser });
-// $FlowIssue
-export default compose(connect(map), joinChannelWithToken)(PrivateChannelJoin);
+export default compose(
+  withCurrentUser,
+  joinChannelWithToken,
+  connect()
+)(PrivateChannelJoin);

@@ -1,17 +1,22 @@
 // @flow
-console.log('Hyperion starting...');
 const debug = require('debug')('hyperion');
+import 'raf/polyfill';
+debug('Hyperion starting...');
 debug('logging with debug enabled');
-// $FlowFixMe
-require('isomorphic-fetch');
+require('isomorphic-fetch'); // prevent https://github.com/withspectrum/spectrum/issues/3032
+import fs from 'fs';
 import express from 'express';
 import Loadable from 'react-loadable';
 import path from 'path';
-import { getUser } from 'api/models/user';
+// TODO: This is the only thing that connects hyperion to the db
+// we should get rid of this if at all possible
+import { getUserById } from 'shared/db/queries/user';
 import Raven from 'shared/raven';
 import toobusy from 'shared/middlewares/toobusy';
+import addSecurityMiddleware from 'shared/middlewares/security';
 
 const PORT = process.env.PORT || 3006;
+const ONE_HOUR = 3600;
 
 const app = express();
 
@@ -19,6 +24,9 @@ const app = express();
 app.set('trust proxy', true);
 
 app.use(toobusy);
+
+// Security middleware.
+addSecurityMiddleware(app, { enableNonce: true, enableCSP: true });
 
 if (process.env.NODE_ENV === 'development') {
   const logging = require('shared/middlewares/logging');
@@ -81,12 +89,28 @@ import session from 'shared/middlewares/session';
 app.use(session);
 
 import passport from 'passport';
+// Setup use serialization
 passport.serializeUser((user, done) => {
-  done(null, user.id);
+  done(null, typeof user === 'string' ? user : JSON.stringify(user));
 });
 
-passport.deserializeUser((id, done) => {
-  getUser({ id })
+// NOTE(@mxstbr): `data` used to be just the userID, but is now the full user data
+// to avoid having to go to the db on every single request. We have to handle both
+// cases here, as more and more users use Spectrum again we go to the db less and less
+passport.deserializeUser((data, done) => {
+  // Fast path: try to JSON.parse the data if it works, we got the user data, yay!
+  try {
+    const user = JSON.parse(data);
+    // Make sure more than the user ID is in the data by checking any other required
+    // field for existance
+    if (user.id && user.createdAt) {
+      return done(null, user);
+    }
+    // Ignore JSON parsing errors
+  } catch (err) {}
+
+  // Slow path: data is just the userID (legacy), so we have to go to the db to get the full data
+  getUserById(data)
     .then(user => {
       done(null, user);
     })
@@ -102,9 +126,59 @@ import threadParamRedirect from 'shared/middlewares/thread-param';
 app.use(threadParamRedirect);
 
 // Static files
+// This route handles the case where our ServiceWorker requests main.asdf123.js, but
+// we've deployed a new version of the app so the filename changed to main.dfyt975.js
+let jsFiles;
+try {
+  jsFiles = fs.readdirSync(
+    path.resolve(__dirname, '..', 'build', 'static', 'js')
+  );
+} catch (err) {
+  // In development that folder might not exist, so ignore errors here
+  console.error(err);
+}
 app.use(
-  express.static(path.resolve(__dirname, '..', 'build'), { index: false })
+  express.static(path.resolve(__dirname, '..', 'build'), {
+    index: false,
+    setHeaders: (res, path) => {
+      // Don't cache the serviceworker in the browser
+      if (path.indexOf('sw.js') > -1) {
+        res.setHeader('Cache-Control', 'no-store, no-cache');
+        return;
+      }
+
+      if (path.indexOf('.html') === -1) {
+        // Cache static files in now CDN for seven days
+        // (the filename changes if the file content changes, so we can cache these forever)
+        res.setHeader(
+          'Cache-Control',
+          `max-age=${ONE_HOUR}, s-maxage=${ONE_HOUR}`
+        );
+      }
+    },
+  })
 );
+app.get('/static/js/:name', (req: express$Request, res, next) => {
+  if (!req.params.name) return next();
+  const existingFile = jsFiles.find(file => file.startsWith(req.params.name));
+  if (existingFile) {
+    if (existingFile.indexOf('.html') === -1) {
+      res.setHeader(
+        'Cache-Control',
+        `max-age=${ONE_HOUR}, s-maxage=${ONE_HOUR}`
+      );
+    }
+    return res.sendFile(
+      path.resolve(__dirname, '..', 'build', 'static', 'js', req.params.name)
+    );
+  }
+  // Match the first part of the file name, i.e. from "UserSettings.asdf123.chunk.js" match "UserSettings"
+  const match = req.params.name.match(/(\w+?)\..+js/i);
+  if (!match) return next();
+  const actualFilename = jsFiles.find(file => file.startsWith(match[1]));
+  if (!actualFilename) return next();
+  res.redirect(`/static/js/${actualFilename}`);
+});
 
 // In dev the static files from the root public folder aren't moved to the build folder by create-react-app
 // so we just tell Express to serve those too
@@ -114,8 +188,16 @@ if (process.env.NODE_ENV === 'development') {
   );
 }
 
-import cache from './cache';
-app.use(cache);
+app.get('*', (req: express$Request, res, next) => {
+  // Electron requests should only be client-side rendered
+  if (
+    req.headers['user-agent'] &&
+    req.headers['user-agent'].indexOf('Electron') > -1
+  ) {
+    return res.sendFile(path.resolve(__dirname, '../build/index.html'));
+  }
+  next();
+});
 
 import renderer from './renderer';
 app.get('*', renderer);
@@ -144,7 +226,7 @@ process.on('uncaughtException', async err => {
 
 Loadable.preloadAll().then(() => {
   app.listen(PORT);
-  console.log(
+  debug(
     `Hyperion, the server-side renderer, running at http://localhost:${PORT}`
   );
 });

@@ -15,7 +15,7 @@ export type GetCommunitiesType = Array<?Node>;
 
 export const getCommunitiesByIdsQuery = gql`
   query getCommunitiesByIds($ids: [ID]) {
-    community(ids: $ids) {
+    communities(ids: $ids) {
       ...communityInfo
       ...communityMetaData
     }
@@ -39,20 +39,18 @@ export const getCommunitiesByIds = graphql(
 );
 
 export const getCommunitiesBySlugsQuery = gql`
-  query getCommunitiesBySlugs($slugs: [String]) {
-    community(slugs: $slugs) {
+  query getCommunitiesBySlugs($slugs: [LowercaseString]) {
+    communities(slugs: $slugs) {
       ...communityInfo
-      ...communityMetaData
     }
   }
   ${communityInfoFragment}
-  ${communityMetaDataFragment}
 `;
 
 const getCommunitiesBySlugOptions = {
   options: ({ slugs }: { slugs: Array<string> }) => ({
     variables: {
-      slugs: slugs.map(s => s.toLowerCase()),
+      slugs: slugs,
     },
     fetchPolicy: 'cache-first',
   }),
@@ -67,11 +65,9 @@ const getCommunitiesByCuratedContentTypeQuery = gql`
   query getCommunitiesCollection($curatedContentType: String) {
     communities(curatedContentType: $curatedContentType) {
       ...communityInfo
-      ...communityMetaData
     }
   }
   ${communityInfoFragment}
-  ${communityMetaDataFragment}
 `;
 
 const getCommunitiesByCuratedContentTypeOptions = {

@@ -4,120 +4,120 @@
 const createQueue = require('shared/bull/create-queue.js');
 import type { Queues } from './types';
 const EventEmitter = require('events');
-import {
-  PROCESS_STRIPE_SUBSCRIPTION_WEBHOOK_EVENT,
-  PROCESS_STRIPE_SOURCE_WEBHOOK_EVENT,
-  PROCESS_STRIPE_CUSTOMER_WEBHOOK_EVENT,
-  PROCESS_STRIPE_CHARGE_WEBHOOK_EVENT,
-  PROCESS_STRIPE_INVOICE_WEBHOOK_EVENT,
-  PROCESS_STRIPE_DISCOUNT_WEBHOOK_EVENT,
-  PROCESS_STRIPE_COMMUNITY_ANALYTICS_ADDED,
-  PROCESS_STRIPE_COMMUNITY_ANALYTICS_REMOVED,
-  PROCESS_STRIPE_COMMUNITY_MODERATOR_ADDED,
-  PROCESS_STRIPE_COMMUNITY_MODERATOR_REMOVED,
-  PROCESS_STRIPE_COMMUNITY_PRIORITY_SUPPORT_ADDED,
-  PROCESS_STRIPE_COMMUNITY_PRIORITY_SUPPORT_REMOVED,
-  PROCESS_STRIPE_COMMUNITY_PRIVATE_CHANNEL_ADDED,
-  PROCESS_STRIPE_COMMUNITY_PRIVATE_CHANNEL_REMOVED,
-  PROCESS_STRIPE_COMMUNITY_ADMINISTRATOR_EMAIL_CHANGED,
-  PROCESS_STRIPE_COMMUNITY_CREATED,
-  PROCESS_STRIPE_COMMUNITY_DELETED,
-  PROCESS_STRIPE_COMMUNITY_EDITED,
-  PROCESS_STRIPE_COMMUNITY_OSS_STATUS_ACTIVATED,
-  PROCESS_STRIPE_COMMUNITY_OSS_STATUS_ENABLED,
-  PROCESS_STRIPE_COMMUNITY_OSS_STATUS_DISABLED,
-  PROCESS_STRIPE_PAYMENT_SUCCEEDED,
-  PROCESS_STRIPE_PAYMENT_FAILED,
-  PROCESS_STRIPE_CARD_EXPIRING_WARNING,
-} from 'pluto/queues/constants';
 
 import {
-  SEND_COMMUNITY_PAYMENT_SUCCEEDED_EMAIL,
-  SEND_COMMUNITY_PAYMENT_FAILED_EMAIL,
-  SEND_COMMUNITY_CARD_EXPIRING_WARNING_EMAIL,
   SEND_NEW_DIRECT_MESSAGE_EMAIL,
   SEND_NEW_MESSAGE_EMAIL,
   SEND_NEW_MENTION_MESSAGE_EMAIL,
   SEND_NEW_MENTION_THREAD_EMAIL,
   SEND_PRIVATE_CHANNEL_REQUEST_SENT_EMAIL,
   SEND_PRIVATE_CHANNEL_REQUEST_APPROVED_EMAIL,
+  SEND_PRIVATE_COMMUNITY_REQUEST_SENT_EMAIL,
+  SEND_PRIVATE_COMMUNITY_REQUEST_APPROVED_EMAIL,
   SEND_THREAD_CREATED_NOTIFICATION_EMAIL,
   SEND_ADMIN_TOXIC_MESSAGE_EMAIL,
+  SEND_ADMIN_SLACK_IMPORT_PROCESSED_EMAIL,
+  SEND_ADMIN_USER_SPAMMING_THREADS_NOTIFICATION_EMAIL,
+  SEND_ADMIN_COMMUNITY_CREATED_EMAIL,
+  SEND_ADMIN_USER_REPORTED_EMAIL,
+  SEND_ADMINISTRATOR_EMAIL_VALIDATION_EMAIL,
+  SEND_EMAIL_VALIDATION_EMAIL,
+  SEND_NEW_COMMUNITY_WELCOME_EMAIL,
+  SEND_NEW_USER_WELCOME_EMAIL,
 } from 'hermes/queues/constants';
 
-import { MENTION_NOTIFICATION } from 'athena/queues/constants';
+import {
+  MENTION_NOTIFICATION,
+  THREAD_NOTIFICATION,
+  PROCESS_ADMIN_TOXIC_MESSAGE,
+  COMMUNITY_NOTIFICATION,
+  PROCESS_ADMIN_TOXIC_THREAD,
+  TRACK_USER_LAST_SEEN,
+  REACTION_NOTIFICATION,
+  THREAD_REACTION_NOTIFICATION,
+  PRIVATE_CHANNEL_REQUEST_SENT,
+  PRIVATE_CHANNEL_REQUEST_APPROVED,
+  PRIVATE_COMMUNITY_REQUEST_SENT,
+  PRIVATE_COMMUNITY_REQUEST_APPROVED,
+  COMMUNITY_INVITE_NOTIFICATION,
+  CHANNEL_NOTIFICATION,
+  DIRECT_MESSAGE_NOTIFICATION,
+  MESSAGE_NOTIFICATION,
+  SEND_PUSH_NOTIFICATIONS,
+  SLACK_IMPORT,
+  SEND_SLACK_INVITIATIONS,
+} from 'athena/queues/constants';
+
+import {
+  TRACK_ANALYTICS,
+  IDENTIFY_ANALYTICS,
+} from 'analytics/queues/constants';
+
+import { SEARCH_INDEXING_EVENT } from 'vulcan/queues/constants';
+
+import {
+  PROCESS_REPUTATION_EVENT,
+  CALCULATE_THREAD_SCORE,
+} from 'mercury/constants';
 
 // Normalize our (inconsistent) queue names to a set of JS compatible names
 exports.QUEUE_NAMES = {
   // athena - notifications
-  sendThreadNotificationQueue: 'thread notification',
-  sendCommunityNotificationQueue: 'community notification',
-  trackUserThreadLastSeenQueue: 'track user thread last seen',
-  sendProInvoicePaidNotificationQueue: 'pro invoice paid notification',
-  sendCommunityInvoicePaidNotificationQueue:
-    'community invoice paid notification',
-  sendReactionNotificationQueue: 'reaction notification',
-  sendPrivateChannelRequestQueue: 'private channel request sent',
+  sendThreadNotificationQueue: THREAD_NOTIFICATION,
+  sendCommunityNotificationQueue: COMMUNITY_NOTIFICATION,
+  trackUserThreadLastSeenQueue: TRACK_USER_LAST_SEEN,
+  sendReactionNotificationQueue: REACTION_NOTIFICATION,
+  sendThreadReactionNotificationQueue: THREAD_REACTION_NOTIFICATION,
+  sendPrivateChannelRequestQueue: PRIVATE_CHANNEL_REQUEST_SENT,
+  sendPrivateChannelRequestApprovedQueue: PRIVATE_CHANNEL_REQUEST_APPROVED,
+  sendPrivateCommunityRequestQueue: PRIVATE_COMMUNITY_REQUEST_SENT,
+  sendPrivateCommunityRequestApprovedQueue: PRIVATE_COMMUNITY_REQUEST_APPROVED,
   sendPrivateChannelInviteNotificationQueue:
     'private channel invite notification',
-  sendCommunityInviteNotificationQueue: 'community invite notification',
-  sendChannelNotificationQueue: 'channel notification',
-  sendDirectMessageNotificationQueue: 'direct message notification',
-  sendMessageNotificationQueue: 'message notification',
+  sendCommunityInviteNotificationQueue: COMMUNITY_INVITE_NOTIFICATION,
+  sendChannelNotificationQueue: CHANNEL_NOTIFICATION,
+  sendDirectMessageNotificationQueue: DIRECT_MESSAGE_NOTIFICATION,
+  sendMessageNotificationQueue: MESSAGE_NOTIFICATION,
   sendMentionNotificationQueue: MENTION_NOTIFICATION,
-  sendNotificationAsPushQueue: 'push notifications',
-  slackImportQueue: 'slack import',
+  sendNotificationAsPushQueue: SEND_PUSH_NOTIFICATIONS,
+  slackImportQueue: SLACK_IMPORT,
+  sendSlackInvitationsQueue: SEND_SLACK_INVITIATIONS,
 
   // hermes - emails
-  sendNewUserWelcomeEmailQueue: 'send new user welcome email',
-  sendNewCommunityWelcomeEmailQueue: 'send new community welcome email',
-  sendEmailValidationEmailQueue: 'send email validation email',
-  sendAdministratorEmailValidationEmailQueue:
-    'send administrator email validation email',
-  sendCommunityPaymentSucceededEmailQueue: SEND_COMMUNITY_PAYMENT_SUCCEEDED_EMAIL,
-  sendCommunityPaymentFailedEmailQueue: SEND_COMMUNITY_PAYMENT_FAILED_EMAIL,
-  sendCommunityCardExpiringWarningEmailQueue: SEND_COMMUNITY_CARD_EXPIRING_WARNING_EMAIL,
+  sendNewUserWelcomeEmailQueue: SEND_NEW_USER_WELCOME_EMAIL,
+  sendNewCommunityWelcomeEmailQueue: SEND_NEW_COMMUNITY_WELCOME_EMAIL,
+  sendEmailValidationEmailQueue: SEND_EMAIL_VALIDATION_EMAIL,
+  sendAdministratorEmailValidationEmailQueue: SEND_ADMINISTRATOR_EMAIL_VALIDATION_EMAIL,
   sendNewMessageEmailQueue: SEND_NEW_MESSAGE_EMAIL,
+  bufferNewMessageEmailQueue: 'buffer new message email queue',
   sendNewDirectMessageEmailQueue: SEND_NEW_DIRECT_MESSAGE_EMAIL,
   sendNewMentionMessageEmailQueue: SEND_NEW_MENTION_MESSAGE_EMAIL,
   sendNewMentionThreadEmailQueue: SEND_NEW_MENTION_THREAD_EMAIL,
   sendPrivateChannelRequestEmailQueue: SEND_PRIVATE_CHANNEL_REQUEST_SENT_EMAIL,
   sendPrivateChannelRequestApprovedEmailQueue: SEND_PRIVATE_CHANNEL_REQUEST_APPROVED_EMAIL,
+  sendPrivateCommunityRequestEmailQueue: SEND_PRIVATE_COMMUNITY_REQUEST_SENT_EMAIL,
+  sendPrivateCommunityRequestApprovedEmailQueue: SEND_PRIVATE_COMMUNITY_REQUEST_APPROVED_EMAIL,
   sendThreadCreatedNotificationEmailQueue: SEND_THREAD_CREATED_NOTIFICATION_EMAIL,
 
   // mercury - reputation
-  processReputationEventQueue: 'process reputation event',
+  processReputationEventQueue: PROCESS_REPUTATION_EVENT,
+  calculateThreadScoreQueue: CALCULATE_THREAD_SCORE,
 
-  stripeChargeWebhookEventQueue: PROCESS_STRIPE_CHARGE_WEBHOOK_EVENT,
-  stripeCustomerWebhookEventQueue: PROCESS_STRIPE_CUSTOMER_WEBHOOK_EVENT,
-  stripeSubscriptionWebhookEventQueue: PROCESS_STRIPE_SUBSCRIPTION_WEBHOOK_EVENT,
-  stripeInvoiceWebhookEventQueue: PROCESS_STRIPE_INVOICE_WEBHOOK_EVENT,
-  stripeSourceWebhookEventQueue: PROCESS_STRIPE_SOURCE_WEBHOOK_EVENT,
-  stripeDiscountWebhookEventQueue: PROCESS_STRIPE_DISCOUNT_WEBHOOK_EVENT,
-  stripeCommunityAdministratorEmailChangedQueue: PROCESS_STRIPE_COMMUNITY_ADMINISTRATOR_EMAIL_CHANGED,
-  stripeCommunityAnalyticsAddedQueue: PROCESS_STRIPE_COMMUNITY_ANALYTICS_ADDED,
-  stripeCommunityAnalyticsRemovedQueue: PROCESS_STRIPE_COMMUNITY_ANALYTICS_REMOVED,
-  stripeCommunityCreatedQueue: PROCESS_STRIPE_COMMUNITY_CREATED,
-  stripeCommunityDeletedQueue: PROCESS_STRIPE_COMMUNITY_DELETED,
-  stripeCommunityEditedQueue: PROCESS_STRIPE_COMMUNITY_EDITED,
-  stripeCommunityModeratorAddedQueue: PROCESS_STRIPE_COMMUNITY_MODERATOR_ADDED,
-  stripeCommunityModeratorRemovedQueue: PROCESS_STRIPE_COMMUNITY_MODERATOR_REMOVED,
-  stripeCommunityPrioritySupportAddedQueue: PROCESS_STRIPE_COMMUNITY_PRIORITY_SUPPORT_ADDED,
-  stripeCommunityPrioritySupportRemovedQueue: PROCESS_STRIPE_COMMUNITY_PRIORITY_SUPPORT_REMOVED,
-  stripeCommunityPrivateChannelAddedQueue: PROCESS_STRIPE_COMMUNITY_PRIVATE_CHANNEL_ADDED,
-  stripeCommunityPrivateChannelRemovedQueue: PROCESS_STRIPE_COMMUNITY_PRIVATE_CHANNEL_REMOVED,
-  stripeCommunityOpenSourceStatusEnabledQueue: PROCESS_STRIPE_COMMUNITY_OSS_STATUS_ENABLED,
-  stripeCommunityOpenSourceStatusDisabledQueue: PROCESS_STRIPE_COMMUNITY_OSS_STATUS_DISABLED,
-  stripeCommunityOpenSourceStatusActivatedQueue: PROCESS_STRIPE_COMMUNITY_OSS_STATUS_ACTIVATED,
-  stripePaymentSucceededQueue: PROCESS_STRIPE_PAYMENT_SUCCEEDED,
-  stripePaymentFailedQueue: PROCESS_STRIPE_PAYMENT_FAILED,
-  stripeCardExpiringWarningQueue: PROCESS_STRIPE_CARD_EXPIRING_WARNING,
+  // analytics
+  trackQueue: TRACK_ANALYTICS,
+  identifyQueue: IDENTIFY_ANALYTICS,
 
-  _adminSendCommunityCreatedEmailQueue: 'admin community created',
-  _adminProcessToxicMessageQueue: 'process admin toxic message',
-  _adminProcessToxicThreadQueue: 'process admin toxic thread',
-  _adminProcessSlackImportQueue: 'admin slack import process email',
+  // vulcan
+  searchQueue: SEARCH_INDEXING_EVENT,
+
+  // admin
+  _adminSendCommunityCreatedEmailQueue: SEND_ADMIN_COMMUNITY_CREATED_EMAIL,
+  _adminProcessToxicMessageQueue: PROCESS_ADMIN_TOXIC_MESSAGE,
+  _adminProcessToxicThreadQueue: PROCESS_ADMIN_TOXIC_THREAD,
+  _adminProcessSlackImportQueue: SEND_ADMIN_SLACK_IMPORT_PROCESSED_EMAIL,
   _adminSendToxicContentEmailQueue: SEND_ADMIN_TOXIC_MESSAGE_EMAIL,
+  _adminProcessUserSpammingThreadsQueue: SEND_ADMIN_USER_SPAMMING_THREADS_NOTIFICATION_EMAIL,
+  _adminProcessUserReportedQueue: SEND_ADMIN_USER_REPORTED_EMAIL,
 };
 
 // We add one error listener per queue, so we have to set the max listeners

@@ -1,10 +1,9 @@
 // @flow
-const debug = require('debug')('athena:queue:channel-notification');
-import { getUserById } from '../../models/user';
+const debug = require('debug')('athena:queue:moderation-events:message');
+import { getUserById } from 'shared/db/queries/user';
 import { getThreadById } from '../../models/thread';
 import { getCommunityById } from '../../models/community';
 import { getChannelById } from '../../models/channel';
-import type { DBMessage } from 'shared/types';
 import { toState, toPlainText } from 'shared/draft-utils';
 import getSpectrumScore from './spectrum';
 import getPerspectiveScore from './perspective';
@@ -13,7 +12,9 @@ import type { Job, AdminToxicMessageJobData } from 'shared/bull/types';
 
 export default async (job: Job<AdminToxicMessageJobData>) => {
   debug('new job for admin message moderation');
-  const { data: { message } } = job;
+  const {
+    data: { message },
+  } = job;
 
   const text =
     message.messageType === 'draftjs'
@@ -24,7 +25,13 @@ export default async (job: Job<AdminToxicMessageJobData>) => {
     getSpectrumScore(text, message.id, message.senderId),
     getPerspectiveScore(text),
   ]).catch(err =>
-    console.error('Error getting message moderation scores from providers', err)
+    console.error('Error getting message moderation scores from providers', {
+      error: err.message,
+      data: {
+        text,
+        threadId: message.id,
+      },
+    })
   );
 
   const spectrumScore = scores && scores[0];

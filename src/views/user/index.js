@@ -1,55 +1,68 @@
 // @flow
 import * as React from 'react';
 import compose from 'recompose/compose';
+import { type History, type Match } from 'react-router';
 import { connect } from 'react-redux';
 import generateMetaInfo from 'shared/generate-meta-info';
 import Link from 'src/components/link';
-import AppViewWrapper from '../../components/appViewWrapper';
-import Head from '../../components/head';
-import ThreadFeed from '../../components/threadFeed';
-import { track } from '../../helpers/events';
-import { initNewThreadWithUser } from '../../actions/directMessageThreads';
-import { UserProfile } from '../../components/profile';
-import { LoadingScreen } from '../../components/loading';
-import { NullState } from '../../components/upsell';
-import { Button, ButtonRow } from '../../components/buttons';
+import AppViewWrapper from 'src/components/appViewWrapper';
+import Head from 'src/components/head';
+import ThreadFeed from 'src/components/threadFeed';
+import { initNewThreadWithUser } from 'src/actions/directMessageThreads';
+import { UserProfile } from 'src/components/profile';
+import { LoadingScreen } from 'src/components/loading';
+import { NullState } from 'src/components/upsell';
+import { Button, ButtonRow, TextButton } from 'src/components/buttons';
 import CommunityList from './components/communityList';
 import Search from './components/search';
-import { getUserByMatch } from 'shared/graphql/queries/user/getUser';
-import type { GetUserType } from 'shared/graphql/queries/user/getUser';
+import { withCurrentUser } from 'src/components/withCurrentUser';
+import {
+  getUserByMatch,
+  type GetUserType,
+} from 'shared/graphql/queries/user/getUser';
 import getUserThreads from 'shared/graphql/queries/user/getUserThreadConnection';
-import ViewError from '../../components/viewError';
-import viewNetworkHandler from '../../components/viewNetworkHandler';
+import ViewError from 'src/components/viewError';
 import Titlebar from '../titlebar';
-import { CoverPhoto } from '../../components/profile/coverPhoto';
+import { CoverPhoto } from 'src/components/profile/coverPhoto';
 import { LoginButton } from '../community/style';
-import { Grid, Meta, Content, Extras, ColumnHeading } from './style';
+import viewNetworkHandler from 'src/components/viewNetworkHandler';
+import type { Dispatch } from 'redux';
+import {
+  Grid,
+  Meta,
+  Content,
+  Extras,
+  ColumnHeading,
+  MetaMemberships,
+} from './style';
 import {
   SegmentedControl,
   DesktopSegment,
   MobileSegment,
-} from '../../components/segmentedControl';
+} from 'src/components/segmentedControl';
+import { ErrorBoundary } from 'src/components/error';
+import { openModal } from 'src/actions/modals';
+import { isAdmin } from 'src/helpers/is-admin';
 
-const ThreadFeedWithData = compose(connect(), getUserThreads)(ThreadFeed);
-const ThreadParticipantFeedWithData = compose(connect(), getUserThreads)(
-  ThreadFeed
-);
+const ThreadFeedWithData = compose(
+  connect(),
+  getUserThreads
+)(ThreadFeed);
+const ThreadParticipantFeedWithData = compose(
+  connect(),
+  getUserThreads
+)(ThreadFeed);
 
 type Props = {
-  match: {
-    params: {
-      username: string,
-    },
-  },
+  match: Match,
   currentUser: Object,
   data: {
     user: GetUserType,
   },
   isLoading: boolean,
-  hasError: boolean,
   queryVarIsChanging: boolean,
-  dispatch: Function,
-  history: Object,
+  dispatch: Dispatch<Object>,
+  history: History,
 };
 
 type State = {
@@ -65,15 +78,13 @@ class UserView extends React.Component<Props, State> {
     hasThreads: true,
   };
 
-  componentDidMount() {
-    track('user', 'profile viewed', null);
-  }
+  componentDidMount() {}
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps: Props) {
     if (!prevProps.data.user) return;
+    if (!this.props.data.user) return;
     // track when a new profile is viewed without the component having been remounted
     if (prevProps.data.user.id !== this.props.data.user.id) {
-      track('user', 'profile viewed', null);
     }
   }
 
@@ -94,13 +105,30 @@ class UserView extends React.Component<Props, State> {
     this.props.history.push('/messages/new');
   };
 
+  initReport = () => {
+    const {
+      data: { user },
+      dispatch,
+    } = this.props;
+    return dispatch(openModal('REPORT_USER_MODAL', { user }));
+  };
+
+  initBan = () => {
+    const {
+      data: { user },
+      dispatch,
+    } = this.props;
+    return dispatch(openModal('BAN_USER_MODAL', { user }));
+  };
+
   render() {
     const {
       data: { user },
       isLoading,
-      hasError,
       queryVarIsChanging,
-      match: { params: { username } },
+      match: {
+        params: { username },
+      },
       currentUser,
     } = this.props;
     const { hasThreads, selectedView } = this.state;
@@ -136,7 +164,11 @@ class UserView extends React.Component<Props, State> {
             title={title}
             description={description}
             image={user.profilePhoto}
-          />
+            type="profile"
+          >
+            <meta property="profile:last_name" content={user.name} />
+            <meta property="profile:username" content={user.username} />
+          </Head>
           <Titlebar
             title={user.name}
             subtitle={'Posts By'}
@@ -144,27 +176,51 @@ class UserView extends React.Component<Props, State> {
             backRoute={'/'}
             noComposer
           />
-          <Grid>
+          <Grid id="main">
             <CoverPhoto src={user.coverPhoto} />
             <Meta>
-              <UserProfile
-                data={{ user }}
-                username={username}
-                profileSize="full"
-              />
+              <ErrorBoundary fallbackComponent={null}>
+                <UserProfile
+                  data={{ user }}
+                  username={username}
+                  profileSize="full"
+                  showHoverProfile={false}
+                />
+              </ErrorBoundary>
 
               {currentUser &&
                 user.id !== currentUser.id && (
-                  <LoginButton onClick={() => this.initMessage(user)}>
-                    Message {user.name}
-                  </LoginButton>
+                  <React.Fragment>
+                    <LoginButton onClick={() => this.initMessage(user)}>
+                      Message {user.name}
+                    </LoginButton>
+                    <TextButton onClick={this.initReport}>Report</TextButton>
+                  </React.Fragment>
                 )}
+
+              {currentUser &&
+                user.id !== currentUser.id &&
+                isAdmin(currentUser.id) && (
+                  <TextButton onClick={this.initBan}>Ban</TextButton>
+                )}
+
               {currentUser &&
                 user.id === currentUser.id && (
                   <Link to={`/users/${username}/settings`}>
                     <LoginButton isMember>My settings</LoginButton>
                   </Link>
                 )}
+
+              <ErrorBoundary fallbackComponent={null}>
+                <MetaMemberships>
+                  <ColumnHeading>Member of</ColumnHeading>
+                  <CommunityList
+                    currentUser={currentUser}
+                    user={user}
+                    id={user.id}
+                  />
+                </MetaMemberships>
+              </ErrorBoundary>
             </Meta>
             <Content>
               <SegmentedControl style={{ margin: '16px 0 0 0' }}>
@@ -220,7 +276,11 @@ class UserView extends React.Component<Props, State> {
                   <Feed
                     userId={user.id}
                     username={username}
-                    viewContext="profile"
+                    viewContext={
+                      selectedView === 'participant'
+                        ? 'userProfileReplies'
+                        : 'userProfile'
+                    }
                     hasNoThreads={this.hasNoThreads}
                     hasThreads={this.hasThreads}
                     kind={selectedView}
@@ -233,12 +293,14 @@ class UserView extends React.Component<Props, State> {
               {!hasThreads && <NullState bg="null" heading={nullHeading} />}
             </Content>
             <Extras>
-              <ColumnHeading>Member of</ColumnHeading>
-              <CommunityList
-                currentUser={currentUser}
-                user={user}
-                id={user.id}
-              />
+              <ErrorBoundary fallbackComponent={null}>
+                <ColumnHeading>Member of</ColumnHeading>
+                <CommunityList
+                  currentUser={currentUser}
+                  user={user}
+                  id={user.id}
+                />
+              </ErrorBoundary>
             </Extras>
           </Grid>
         </AppViewWrapper>
@@ -247,23 +309,6 @@ class UserView extends React.Component<Props, State> {
 
     if (isLoading) {
       return <LoadingScreen />;
-    }
-
-    if (hasError) {
-      return (
-        <AppViewWrapper>
-          <Titlebar
-            title={'User not found'}
-            provideBack={true}
-            backRoute={'/'}
-            noComposer
-          />
-          <ViewError
-            heading={'We ran into an error loading this user.'}
-            refresh
-          />
-        </AppViewWrapper>
-      );
     }
 
     if (!user) {
@@ -275,7 +320,10 @@ class UserView extends React.Component<Props, State> {
             backRoute={'/'}
             noComposer
           />
-          <ViewError heading={'We couldn’t find anyone with this username.'}>
+          <ViewError
+            dataCy="user-not-found"
+            heading={'We couldn’t find anyone with this username.'}
+          >
             <ButtonRow>
               <Link to={'/'}>
                 <Button large>Take me home</Button>
@@ -285,13 +333,27 @@ class UserView extends React.Component<Props, State> {
         </AppViewWrapper>
       );
     }
+
+    return (
+      <AppViewWrapper>
+        <Titlebar
+          title={'User not found'}
+          provideBack={true}
+          backRoute={'/'}
+          noComposer
+        />
+        <ViewError
+          heading={'We ran into an error loading this user.'}
+          refresh
+        />
+      </AppViewWrapper>
+    );
   }
 }
 
-const map = state => ({ currentUser: state.users.currentUser });
 export default compose(
-  // $FlowIssue
-  connect(map),
   getUserByMatch,
-  viewNetworkHandler
+  withCurrentUser,
+  viewNetworkHandler,
+  connect()
 )(UserView);

@@ -15,7 +15,7 @@ type Edge = {
 };
 
 export type ChannelMemberConnectionType = {
-  memberConnection: {
+  memberConnection?: {
     pageInfo: {
       hasNextPage: boolean,
       hasPreviousPage: boolean,
@@ -35,7 +35,6 @@ export default gql`
         cursor
         node {
           ...userInfo
-          isPro
           contextPermissions {
             communityId
             reputation

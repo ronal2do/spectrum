@@ -3,32 +3,39 @@ import * as React from 'react';
 import { connect } from 'react-redux';
 import compose from 'recompose/compose';
 import Link from 'src/components/link';
-import Icon from '../../../components/icons';
-import { Button } from '../../../components/buttons';
+import {
+  CommunityHoverProfile,
+  ChannelHoverProfile,
+} from 'src/components/hoverProfile';
+import { LikeButton } from 'src/components/threadLikes';
+import { convertTimestampToDate } from 'shared/time-formatting';
+import { Button } from 'src/components/buttons';
 import toggleChannelSubscriptionMutation from 'shared/graphql/mutations/channel/toggleChannelSubscription';
 import type { GetThreadType } from 'shared/graphql/queries/thread/getThread';
-import { addToastWithTimeout } from '../../../actions/toasts';
-import Avatar from '../../../components/avatar';
-import { track } from '../../../helpers/events';
+import { addToastWithTimeout } from 'src/actions/toasts';
+import { CommunityAvatar } from 'src/components/avatar';
 import { CLIENT_URL } from 'src/api/constants';
+import getThreadLink from 'src/helpers/get-thread-link';
+import type { Dispatch } from 'redux';
+import { withCurrentUser } from 'src/components/withCurrentUser';
 import {
   CommunityHeader,
   CommunityHeaderName,
-  CommunityHeaderLink,
   CommunityHeaderMeta,
+  CommunityHeaderSubtitle,
   CommunityHeaderMetaCol,
-  PillLink,
-  PillLabel,
-  Lock,
+  AnimatedContainer,
 } from '../style';
 
 type Props = {
-  dispatch: Function,
+  dispatch: Dispatch<Object>,
   toggleChannelSubscription: Function,
   currentUser: Object,
   hide: boolean,
   watercooler: boolean,
   thread: GetThreadType,
+  isVisible: boolean,
+  forceScrollToTop: Function,
 };
 type State = {
   isLoading: boolean,
@@ -64,7 +71,6 @@ class ThreadCommunityBanner extends React.Component<Props, State> {
 
         let str = '';
         if (isPending) {
-          track('channel', 'requested to join', null);
           str = `Your request to join the ${
             toggleChannelSubscription.name
           } channel in ${
@@ -73,14 +79,12 @@ class ThreadCommunityBanner extends React.Component<Props, State> {
         }
 
         if (!isPending && isMember) {
-          track('channel', 'joined', null);
           str = `Joined the ${
             toggleChannelSubscription.community.name
           } community!`;
         }
 
         if (!isPending && !isMember) {
-          track('channel', 'unjoined', null);
           str = `Left the channel ${toggleChannelSubscription.name} in ${
             toggleChannelSubscription.community.name
           }.`;
@@ -99,65 +103,72 @@ class ThreadCommunityBanner extends React.Component<Props, State> {
 
   render() {
     const {
-      thread: { channel, community, watercooler, id },
+      thread: { channel, community, watercooler },
+      thread,
       currentUser,
-      hide,
+      isVisible,
+      forceScrollToTop,
     } = this.props;
     const { isLoading } = this.state;
 
     const loginUrl = community.brandedLogin.isEnabled
-      ? `/${community.slug}/login?r=${CLIENT_URL}/thread/${id}`
-      : `/login?r=${CLIENT_URL}/${community.slug}/thread/${id}`;
+      ? `/${community.slug}/login?r=${CLIENT_URL}/${getThreadLink(thread)}`
+      : `/login?r=${CLIENT_URL}/${getThreadLink(thread)}`;
+
+    const createdAt = new Date(thread.createdAt).getTime();
+    const timestamp = convertTimestampToDate(createdAt);
 
     return (
-      <CommunityHeader hide={hide}>
-        <CommunityHeaderMeta>
-          <CommunityHeaderLink to={`/${community.slug}`}>
-            <Avatar src={community.profilePhoto} community size="32" />
-          </CommunityHeaderLink>
-          <CommunityHeaderMetaCol>
-            <CommunityHeaderLink to={`/${community.slug}`}>
-              <CommunityHeaderName>
-                {watercooler ? `${community.name} watercooler` : community.name}
+      <AnimatedContainer isVisible={isVisible}>
+        <CommunityHeader>
+          <CommunityHeaderMeta>
+            <CommunityAvatar community={community} size={32} />
+            <CommunityHeaderMetaCol>
+              <CommunityHeaderName onClick={forceScrollToTop}>
+                {watercooler
+                  ? `${community.name} watercooler`
+                  : thread.content.title}
               </CommunityHeaderName>
-            </CommunityHeaderLink>
+              <CommunityHeaderSubtitle>
+                <CommunityHoverProfile id={community.id}>
+                  <Link to={`/${community.slug}`}>{community.name}</Link>
+                </CommunityHoverProfile>
+                <span>/</span>
+                <ChannelHoverProfile id={channel.id}>
+                  <Link to={`/${community.slug}/${channel.slug}`}>
+                    {channel.name}
+                  </Link>
+                </ChannelHoverProfile>
+                <Link to={'/' + getThreadLink(thread)}>
+                  &nbsp;
+                  {`· ${timestamp}`}
+                </Link>
+              </CommunityHeaderSubtitle>
+            </CommunityHeaderMetaCol>
+          </CommunityHeaderMeta>
 
-            {channel.slug !== 'general' && (
-              <PillLink to={`/${community.slug}/${channel.slug}`}>
-                {channel.isPrivate && (
-                  <Lock>
-                    <Icon glyph="private" size={12} />
-                  </Lock>
-                )}
-                <PillLabel isPrivate={channel.isPrivate}>
-                  {channel.name}
-                </PillLabel>
-              </PillLink>
-            )}
-          </CommunityHeaderMetaCol>
-        </CommunityHeaderMeta>
-
-        {channel.channelPermissions.isMember ? (
-          <span />
-        ) : currentUser ? (
-          <Button
-            gradientTheme={'success'}
-            onClick={this.joinChannel}
-            loading={isLoading}
-          >
-            Join channel
-          </Button>
-        ) : (
-          <Link to={loginUrl}>
-            <Button gradientTheme={'success'}>Join Community</Button>
-          </Link>
-        )}
-      </CommunityHeader>
+          {channel.channelPermissions.isMember ? (
+            <LikeButton thread={thread} />
+          ) : currentUser ? (
+            <Button
+              gradientTheme={'success'}
+              onClick={this.joinChannel}
+              loading={isLoading}
+            >
+              Join channel
+            </Button>
+          ) : (
+            <Link to={loginUrl}>
+              <Button gradientTheme={'success'}>Join Community</Button>
+            </Link>
+          )}
+        </CommunityHeader>
+      </AnimatedContainer>
     );
   }
 }
-const map = state => ({ currentUser: state.users.currentUser });
-// $FlowIssue
-export default compose(connect(map), toggleChannelSubscriptionMutation)(
-  ThreadCommunityBanner
-);
+export default compose(
+  withCurrentUser,
+  toggleChannelSubscriptionMutation,
+  connect()
+)(ThreadCommunityBanner);

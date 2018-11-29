@@ -20,9 +20,10 @@ const { userId: memberInArchivedChannelId } = data.usersChannels.find(
 const QUIET_USER_ID = constants.QUIET_USER_ID;
 
 describe('renders composer for logged in members', () => {
-  before(() => {
-    cy.auth(memberInChannelId);
-    cy.visit(`/${community.slug}/${channel.slug}`);
+  beforeEach(() => {
+    cy.auth(memberInChannelId).then(() =>
+      cy.visit(`/${community.slug}/${channel.slug}`)
+    );
   });
 
   it('should render composer', () => {
@@ -37,9 +38,10 @@ describe('renders composer for logged in members', () => {
 });
 
 describe('does not render composer for non members', () => {
-  before(() => {
-    cy.auth(QUIET_USER_ID);
-    cy.visit(`/${community.slug}/${channel.slug}`);
+  beforeEach(() => {
+    cy.auth(QUIET_USER_ID).then(() =>
+      cy.visit(`/${community.slug}/${channel.slug}`)
+    );
   });
 
   it('should not render composer', () => {
@@ -50,7 +52,7 @@ describe('does not render composer for non members', () => {
 });
 
 describe('does not render composer for logged out users', () => {
-  before(() => {
+  beforeEach(() => {
     cy.visit(`/${community.slug}/${channel.slug}`);
   });
 
@@ -62,9 +64,10 @@ describe('does not render composer for logged out users', () => {
 });
 
 describe('does not render composer for archived channel', () => {
-  before(() => {
-    cy.auth(memberInArchivedChannelId);
-    cy.visit(`/${community.slug}/${archivedChannel.slug}`);
+  beforeEach(() => {
+    cy.auth(memberInArchivedChannelId).then(() =>
+      cy.visit(`/${community.slug}/${archivedChannel.slug}`)
+    );
   });
 
   it('should not render composer', () => {

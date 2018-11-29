@@ -1,7 +1,7 @@
 // @flow
 import gql from 'graphql-tag';
 import { graphql } from 'react-apollo';
-import { btoa } from 'abab';
+import { btoa } from 'b2a';
 import messageInfoFragment from '../../fragments/message/messageInfo';
 import type { MessageInfoType } from '../../fragments/message/messageInfo';
 import { getThreadMessageConnectionQuery } from '../../queries/thread/getThreadMessageConnection';
@@ -25,7 +25,7 @@ export const sendMessageMutation = gql`
 
 const sendMessageOptions = {
   props: ({ ownProps, mutate }) => ({
-    sendMessage: message => {
+    sendMessage: (message, author) => {
       const fakeId = Math.round(Math.random() * -1000000);
       return mutate({
         variables: {
@@ -42,9 +42,10 @@ const sendMessageOptions = {
             id: fakeId,
             timestamp: JSON.parse(JSON.stringify(new Date())),
             messageType: message.messageType,
+            modifiedAt: '',
             author: {
               user: {
-                ...ownProps.currentUser,
+                ...(ownProps.currentUser || author),
                 __typename: 'User',
               },
               isMember: true,
@@ -55,6 +56,13 @@ const sendMessageOptions = {
               roles: [],
               __typename: 'ThreadParticipant',
             },
+            parent: message.parentId
+              ? {
+                  __typename: 'Message',
+                  id: message.parentId,
+                  // TODO(@mxstbr): Get the rest of information
+                }
+              : null,
             content: {
               ...message.content,
               __typename: 'MessageContent',
@@ -71,7 +79,7 @@ const sendMessageOptions = {
           const data = store.readQuery({
             query: getThreadMessageConnectionQuery,
             variables: {
-              id: ownProps.thread,
+              id: message.threadId,
             },
           });
 
@@ -117,7 +125,7 @@ const sendMessageOptions = {
             query: getThreadMessageConnectionQuery,
             data,
             variables: {
-              id: ownProps.thread,
+              id: message.threadId,
             },
           });
         },

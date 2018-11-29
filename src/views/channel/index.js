@@ -3,44 +3,66 @@ import * as React from 'react';
 import compose from 'recompose/compose';
 import { connect } from 'react-redux';
 import generateMetaInfo from 'shared/generate-meta-info';
-import { addCommunityToOnboarding } from '../../actions/newUserOnboarding';
-import ThreadComposer from '../../components/threadComposer';
-import Head from '../../components/head';
-import AppViewWrapper from '../../components/appViewWrapper';
-import viewNetworkHandler from '../../components/viewNetworkHandler';
-import ViewError from '../../components/viewError';
+import { CommunityAvatar } from 'src/components/avatar';
+import { addCommunityToOnboarding } from 'src/actions/newUserOnboarding';
+import ThreadComposer from 'src/components/threadComposer';
+import Head from 'src/components/head';
+import AppViewWrapper from 'src/components/appViewWrapper';
+import viewNetworkHandler from 'src/components/viewNetworkHandler';
+import ViewError from 'src/components/viewError';
 import Link from 'src/components/link';
-import ThreadFeed from '../../components/threadFeed';
-import { ChannelProfile } from '../../components/profile';
+import ThreadFeed from 'src/components/threadFeed';
 import PendingUsersNotification from './components/pendingUsersNotification';
 import NotificationsToggle from './components/notificationsToggle';
 import getChannelThreadConnection from 'shared/graphql/queries/channel/getChannelThreadConnection';
 import { getChannelByMatch } from 'shared/graphql/queries/channel/getChannel';
 import type { GetChannelType } from 'shared/graphql/queries/channel/getChannel';
 import Login from '../login';
-import { LoadingScreen } from '../../components/loading';
-import { Upsell404Channel } from '../../components/upsell';
-import RequestToJoinChannel from '../../components/upsell/requestToJoinChannel';
+import { LoadingScreen } from 'src/components/loading';
+import { Upsell404Channel } from 'src/components/upsell';
+import RequestToJoinChannel from 'src/components/upsell/requestToJoinChannel';
 import Titlebar from '../titlebar';
-import Icon from '../../components/icons';
+import Icon from 'src/components/icons';
 import Search from './components/search';
 import ChannelMemberGrid from './components/memberGrid';
-import { CLIENT_URL } from '../../api/constants';
+import { CLIENT_URL } from 'src/api/constants';
 import CommunityLogin from 'src/views/communityLogin';
+import { withCurrentUser } from 'src/components/withCurrentUser';
 import {
   SegmentedControl,
   DesktopSegment,
   Segment,
   MobileSegment,
-} from '../../components/segmentedControl';
-import { Grid, Meta, Content, Extras } from './style';
-import { CoverPhoto } from '../../components/profile/coverPhoto';
-import { LoginButton, ColumnHeading, MidSegment } from '../community/style';
-import ToggleChannelMembership from '../../components/toggleChannelMembership';
+} from 'src/components/segmentedControl';
+import {
+  Grid,
+  Meta,
+  Content,
+  Extras,
+  CommunityContext,
+  CommunityName,
+  ChannelName,
+  ChannelDescription,
+  MetadataContainer,
+} from './style';
+import { ExtLink, OnlineIndicator } from 'src/components/profile/style';
+import { CoverPhoto } from 'src/components/profile/coverPhoto';
+import {
+  LoginButton,
+  ColumnHeading,
+  MidSegment,
+  SettingsButton,
+  LoginOutlineButton,
+} from '../community/style';
+import ToggleChannelMembership from 'src/components/toggleChannelMembership';
+import { track, events, transformations } from 'src/helpers/analytics';
+import type { Dispatch } from 'redux';
+import { ErrorBoundary } from 'src/components/error';
 
-const ThreadFeedWithData = compose(connect(), getChannelThreadConnection)(
-  ThreadFeed
-);
+const ThreadFeedWithData = compose(
+  connect(),
+  getChannelThreadConnection
+)(ThreadFeed);
 
 type Props = {
   match: {
@@ -55,7 +77,7 @@ type Props = {
   currentUser: Object,
   isLoading: boolean,
   hasError: boolean,
-  dispatch: Function,
+  dispatch: Dispatch<Object>,
 };
 
 type State = {
@@ -67,16 +89,37 @@ class ChannelView extends React.Component<Props, State> {
     selectedView: 'threads',
   };
 
+  componentDidMount() {
+    if (this.props.data && this.props.data.channel) {
+      const { channel } = this.props.data;
+
+      track(events.CHANNEL_VIEWED, {
+        channel: transformations.analyticsChannel(channel),
+        community: transformations.analyticsCommunity(channel.community),
+      });
+    }
+  }
+
   componentDidUpdate(prevProps) {
-    // if the user is new and signed up through a channel page, push
-    // the channel's community data into the store to hydrate the new user experience
-    // with their first community they should join
-    if (this.props.currentUser) return;
     if (
       (!prevProps.data.channel && this.props.data.channel) ||
       (prevProps.data.channel &&
+        this.props.data.channel &&
         prevProps.data.channel.id !== this.props.data.channel.id)
     ) {
+      const { channel } = this.props.data;
+
+      if (channel) {
+        track(events.CHANNEL_VIEWED, {
+          channel: transformations.analyticsChannel(channel),
+          community: transformations.analyticsCommunity(channel.community),
+        });
+      }
+
+      // if the user is new and signed up through a community page, push
+      // the community data into the store to hydrate the new user experience
+      // with their first community they should join
+      if (this.props.currentUser) return;
       this.props.dispatch(
         addCommunityToOnboarding(this.props.data.channel.community)
       );
@@ -99,8 +142,12 @@ class ChannelView extends React.Component<Props, State> {
       isMember: isChannelMember,
     } = channel.channelPermissions;
     const { communityPermissions } = channel.community;
-    const { isOwner: isCommunityOwner } = communityPermissions;
+    const {
+      isOwner: isCommunityOwner,
+      isModerator: isCommunityModerator,
+    } = communityPermissions;
     const isGlobalOwner = isChannelOwner || isCommunityOwner;
+    const isGlobalModerator = isCommunityModerator;
 
     const loginUrl = channel.community.brandedLogin.isEnabled
       ? `/${channel.community.slug}/login?r=${CLIENT_URL}/${
@@ -126,14 +173,55 @@ class ChannelView extends React.Component<Props, State> {
       if (isGlobalOwner) {
         return (
           <Link to={`/${channel.community.slug}/${channel.slug}/settings`}>
-            <LoginButton
+            <SettingsButton
               icon={'settings'}
               isMember
               data-cy="channel-settings-button"
             >
               Settings
-            </LoginButton>
+            </SettingsButton>
           </Link>
+        );
+      }
+
+      if (isGlobalModerator) {
+        return (
+          <React.Fragment>
+            <ToggleChannelMembership
+              channel={channel}
+              render={state => {
+                if (isChannelMember) {
+                  return (
+                    <LoginOutlineButton
+                      loading={state.isLoading}
+                      dataCy={'channel-leave-button'}
+                    >
+                      Leave channel
+                    </LoginOutlineButton>
+                  );
+                } else {
+                  return (
+                    <LoginButton
+                      loading={state.isLoading}
+                      dataCy="channel-join-button"
+                    >
+                      Join {channel.name}
+                    </LoginButton>
+                  );
+                }
+              }}
+            />
+
+            <Link to={`/${channel.community.slug}/${channel.slug}/settings`}>
+              <SettingsButton
+                icon={'settings'}
+                isMember
+                data-cy="channel-settings-button"
+              >
+                Settings
+              </SettingsButton>
+            </Link>
+          </React.Fragment>
         );
       }
 
@@ -141,16 +229,27 @@ class ChannelView extends React.Component<Props, State> {
       return (
         <ToggleChannelMembership
           channel={channel}
-          render={state => (
-            <LoginButton
-              isMember={isChannelMember}
-              icon={isChannelMember ? 'checkmark' : null}
-              loading={state.isLoading}
-              dataCy="channel-join-button"
-            >
-              {isChannelMember ? 'Joined' : `Join ${channel.name}`}
-            </LoginButton>
-          )}
+          render={state => {
+            if (isChannelMember) {
+              return (
+                <LoginOutlineButton
+                  loading={state.isLoading}
+                  dataCy={'channel-leave-button'}
+                >
+                  Leave channel
+                </LoginOutlineButton>
+              );
+            } else {
+              return (
+                <LoginButton
+                  loading={state.isLoading}
+                  dataCy="channel-join-button"
+                >
+                  Join {channel.name}
+                </LoginButton>
+              );
+            }
+          }}
         />
       );
     }
@@ -169,7 +268,7 @@ class ChannelView extends React.Component<Props, State> {
     const isLoggedIn = currentUser;
 
     if (channel && channel.id) {
-      // at this point the view is no longer loading, has not encountered an error, and has returned a community record
+      // at this point the view is no longer loading, has not encountered an error, and has returned a channel record
       const {
         isBlocked,
         isPending,
@@ -177,18 +276,19 @@ class ChannelView extends React.Component<Props, State> {
         isOwner,
         isModerator,
       } = channel.channelPermissions;
+      const { community } = channel;
       const userHasPermissions = isMember || isOwner || isModerator;
       const isRestricted = channel.isPrivate && !userHasPermissions;
+      const hasCommunityPermissions =
+        !community.isPrivate || community.communityPermissions.isMember;
       const isGlobalOwner =
         isOwner || channel.community.communityPermissions.isOwner;
 
-      const redirectPath = `${CLIENT_URL}/${channel.community.slug}/${
-        channel.slug
-      }`;
+      const redirectPath = `${CLIENT_URL}/${community.slug}/${channel.slug}`;
 
       // if the channel is private but the user isn't logged in, redirect to the login page
       if (!isLoggedIn && channel.isPrivate) {
-        if (channel.community.brandedLogin.isEnabled) {
+        if (community.brandedLogin.isEnabled) {
           return <CommunityLogin redirectPath={redirectPath} match={match} />;
         } else {
           return <Login redirectPath={redirectPath} />;
@@ -196,7 +296,11 @@ class ChannelView extends React.Component<Props, State> {
       }
 
       // user has explicitly been blocked from this channel
-      if (isBlocked || channel.community.communityPermissions.isBlocked) {
+      if (
+        isBlocked ||
+        community.communityPermissions.isBlocked ||
+        !hasCommunityPermissions
+      ) {
         return (
           <AppViewWrapper>
             <Titlebar
@@ -223,7 +327,7 @@ class ChannelView extends React.Component<Props, State> {
           <AppViewWrapper>
             <Titlebar
               title={channel.name}
-              subtitle={channel.community.name}
+              subtitle={community.name}
               provideBack={true}
               backRoute={`/${communitySlug}`}
               noComposer
@@ -238,17 +342,17 @@ class ChannelView extends React.Component<Props, State> {
               subheading={
                 isPending
                   ? `Return to the ${
-                      channel.community.name
+                      community.name
                     } community until you hear back.`
                   : `Request to join this channel and the admins of ${
-                      channel.community.name
+                      community.name
                     } will be notified.`
               }
               dataCy={'channel-view-is-restricted'}
             >
               <RequestToJoinChannel
                 channel={channel}
-                community={channel.community}
+                community={community}
                 isPending={isPending}
               />
             </ViewError>
@@ -261,7 +365,7 @@ class ChannelView extends React.Component<Props, State> {
         type: 'channel',
         data: {
           name: channel.name,
-          communityName: channel.community.name,
+          communityName: community.name,
           description: channel.description,
         },
       });
@@ -273,35 +377,80 @@ class ChannelView extends React.Component<Props, State> {
           <Head
             title={title}
             description={description}
-            image={channel.community.profilePhoto}
+            image={community.profilePhoto}
           />
           <Titlebar
             title={channel.name}
-            subtitle={channel.community.name}
+            subtitle={community.name}
             provideBack={true}
             backRoute={`/${communitySlug}`}
             noComposer={!isMember}
+            activeCommunitySlug={communitySlug}
+            activeChannelSlug={channel.slug}
           />
-          <Grid>
-            <CoverPhoto src={channel.community.coverPhoto} />
-            <Meta>
-              <ChannelProfile data={{ channel }} profileSize="full" />
+          <Grid id="main">
+            <CoverPhoto src={community.coverPhoto} />
+            <Meta data-cy="channel-profile-full">
+              <CommunityContext>
+                <CommunityAvatar community={community} />
+                <Link to={`/${community.slug}`}>
+                  <CommunityName>{community.name}</CommunityName>
+                </Link>
+              </CommunityContext>
 
-              {actionButton}
+              <ChannelName>
+                {channel.name}
+                {channel.isArchived && ' (Archived)'}
+              </ChannelName>
+              {channel.description && (
+                <ChannelDescription>{channel.description}</ChannelDescription>
+              )}
+
+              <MetadataContainer>
+                {channel.metaData &&
+                  channel.metaData.members && (
+                    <ExtLink>
+                      <Icon glyph="person" size={24} />
+                      {channel.metaData.members.toLocaleString()}
+                      {channel.metaData.members > 1 ? ' members' : ' member'}
+                    </ExtLink>
+                  )}
+
+                {channel.metaData &&
+                  typeof channel.metaData.onlineMembers === 'number' && (
+                    <ExtLink>
+                      <OnlineIndicator
+                        offline={channel.metaData.onlineMembers === 0}
+                      />
+                      {channel.metaData.onlineMembers} online
+                    </ExtLink>
+                  )}
+
+                <div style={{ height: '8px' }} />
+
+                {actionButton}
+              </MetadataContainer>
 
               {isLoggedIn &&
                 userHasPermissions &&
                 !channel.isArchived && (
-                  <NotificationsToggle
-                    value={channel.channelPermissions.receiveNotifications}
-                    channel={channel}
-                  />
+                  <ErrorBoundary fallbackComponent={null}>
+                    <NotificationsToggle
+                      value={channel.channelPermissions.receiveNotifications}
+                      channel={channel}
+                    />
+                  </ErrorBoundary>
                 )}
 
               {/* user is signed in and has permissions to view pending users */}
               {isLoggedIn &&
                 (isOwner || isGlobalOwner) && (
-                  <PendingUsersNotification channel={channel} id={channel.id} />
+                  <ErrorBoundary fallbackComponent={null}>
+                    <PendingUsersNotification
+                      channel={channel}
+                      id={channel.id}
+                    />
+                  </ErrorBoundary>
                 )}
             </Meta>
             <Content>
@@ -327,9 +476,11 @@ class ChannelView extends React.Component<Props, State> {
                   onClick={() => this.handleSegmentClick('members')}
                   selected={selectedView === 'members'}
                 >
-                  Members ({channel.metaData &&
+                  Members (
+                  {channel.metaData &&
                     channel.metaData.members &&
-                    channel.metaData.members.toLocaleString()})
+                    channel.metaData.members.toLocaleString()}
+                  )
                 </MidSegment>
                 <MobileSegment
                   segmentLabel="members"
@@ -354,16 +505,18 @@ class ChannelView extends React.Component<Props, State> {
                 userHasPermissions &&
                 ((channel.isPrivate && !channel.isArchived) ||
                   !channel.isPrivate) && (
-                  <ThreadComposer
-                    activeCommunity={communitySlug}
-                    activeChannel={channelSlug}
-                  />
+                  <ErrorBoundary fallbackComponent={null}>
+                    <ThreadComposer
+                      activeCommunity={communitySlug}
+                      activeChannel={channelSlug}
+                    />
+                  </ErrorBoundary>
                 )}
 
               {// thread list
               selectedView === 'threads' && (
                 <ThreadFeedWithData
-                  viewContext="channel"
+                  viewContext="channelProfile"
                   id={channel.id}
                   currentUser={isLoggedIn}
                   channelId={channel.id}
@@ -371,16 +524,24 @@ class ChannelView extends React.Component<Props, State> {
               )}
 
               {//search
-              selectedView === 'search' && <Search channel={channel} />}
+              selectedView === 'search' && (
+                <ErrorBoundary>
+                  <Search channel={channel} />
+                </ErrorBoundary>
+              )}
 
               {// members grid
               selectedView === 'members' && (
-                <ChannelMemberGrid id={channel.id} />
+                <ErrorBoundary>
+                  <ChannelMemberGrid id={channel.id} />
+                </ErrorBoundary>
               )}
             </Content>
             <Extras>
-              <ColumnHeading>Members</ColumnHeading>
-              <ChannelMemberGrid first={5} id={channel.id} />
+              <ErrorBoundary fallbackComponent={null}>
+                <ColumnHeading>Members</ColumnHeading>
+                <ChannelMemberGrid first={5} id={channel.id} />
+              </ErrorBoundary>
             </Extras>
           </Grid>
         </AppViewWrapper>
@@ -428,13 +589,9 @@ class ChannelView extends React.Component<Props, State> {
   }
 }
 
-const map = state => ({
-  currentUser: state.users.currentUser,
-});
-
 export default compose(
-  // $FlowIssue
-  connect(map),
+  withCurrentUser,
   getChannelByMatch,
-  viewNetworkHandler
+  viewNetworkHandler,
+  connect()
 )(ChannelView);

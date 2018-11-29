@@ -1,11 +1,13 @@
+// @flow
+import theme from 'shared/theme';
 import styled from 'styled-components';
 import Card from '../../components/card';
-import { FlexCol, Transition, zIndex } from '../../components/globals';
+import { Transition, zIndex, Truncate } from '../../components/globals';
 import { SegmentedControl } from '../../components/segmentedControl';
 import { FullProfile, FullDescription } from 'src/components/profile/style';
 import { ListContainer } from 'src/components/listItems/style';
 
-export const Grid = styled.div`
+export const Grid = styled.main`
   display: grid;
   grid-template-columns: minmax(320px, 1fr) 3fr minmax(240px, 2fr);
   grid-template-rows: 160px 1fr;
@@ -14,11 +16,10 @@ export const Grid = styled.div`
   width: 100%;
   min-width: 100%;
   max-width: 100%;
-  height: 100%;
   min-height: 100vh;
-  background-color: ${props => props.theme.bg.default};
+  background-color: ${theme.bg.default};
 
-  @media (max-width: 1028px) {
+  @media (max-width: 1280px) {
     grid-template-columns: 240px 1fr;
     grid-template-rows: 80px 1fr;
     grid-template-areas: 'cover cover' 'meta content';
@@ -48,7 +49,7 @@ export const Meta = styled(Column)`
 
   @media (max-width: 768px) {
     > ${FullProfile} {
-      margin-top: 8px;
+      margin-top: 0;
       margin-bottom: 8px;
     }
 
@@ -60,16 +61,6 @@ export const Meta = styled(Column)`
   ${ListContainer} {
     margin: 8px 0 0 32px;
     width: auto;
-
-    @media (max-width: 768px) {
-      margin-left: 0;
-    }
-  }
-
-  > div:nth-of-type(2) {
-    display: flex;
-    flex: none;
-    margin: 16px 0 0 32px;
 
     @media (max-width: 768px) {
       margin-left: 0;
@@ -89,16 +80,17 @@ export const Meta = styled(Column)`
   }
 
   @media (max-width: 768px) {
-    padding: 0 32px;
+    padding: 0 16px;
 
     > div {
       margin-left: 0;
     }
   }
 `;
-
 export const Content = styled(Column)`
   grid-area: content;
+  min-width: 0;
+  align-items: stretch;
 
   @media (max-width: 1280px) and (min-width: 768px) {
     padding-right: 32px;
@@ -113,17 +105,6 @@ export const Content = styled(Column)`
 
 export const Extras = styled(Column)`
   grid-area: extras;
-
-  > ${FlexCol} > div {
-    border-top: 0;
-    padding: 0;
-    padding-top: 24px;
-
-    h3 {
-      font-size: 16px;
-      line-height: 1.2;
-    }
-  }
 
   @media (max-width: 1280px) {
     display: none;
@@ -142,11 +123,11 @@ export const ColumnHeading = styled.div`
   font-weight: 500;
   padding: 8px 16px 12px;
   margin-top: 24px;
-  border-bottom: 2px solid ${props => props.theme.bg.border};
+  border-bottom: 2px solid ${theme.bg.border};
 `;
 
 export const SearchContainer = styled(Card)`
-  border-bottom: 2px solid ${props => props.theme.bg.border};
+  border-bottom: 2px solid ${theme.bg.border};
   position: relative;
   z-index: ${zIndex.search};
   width: 100%;
@@ -156,7 +137,7 @@ export const SearchContainer = styled(Card)`
 
   &:hover {
     transition: none;
-    border-bottom: 2px solid ${props => props.theme.brand.alt};
+    border-bottom: 2px solid ${theme.brand.alt};
   }
 
   @media (max-width: 768px) {
@@ -171,11 +152,81 @@ export const SearchInput = styled.input`
   align-items: center;
   cursor: pointer;
   padding: 20px;
-  color: ${props => props.theme.text.default};
+  color: ${theme.text.default};
   transition: ${Transition.hover.off};
   font-size: 20px;
   font-weight: 800;
   margin-left: 8px;
   width: 97%;
   border-radius: 12px;
+`;
+
+export const MessageIconContainer = styled.div`
+  color: ${theme.text.alt};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  &:hover {
+    color: ${theme.brand.alt};
+  }
+`;
+
+export const UserListItemContainer = styled.div`
+  border-bottom: 1px solid ${theme.bg.wash};
+`;
+
+export const CommunityContext = styled.div`
+  display: flex;
+  margin-top: 32px;
+  margin-left: 32px;
+  display: flex;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    margin-top: 16px;
+  }
+`;
+
+export const CommunityName = styled.h5`
+  font-size: 18px;
+  font-weight: 500;
+  margin-left: 16px;
+  color: ${theme.text.secondary};
+
+  ${Truncate};
+`;
+
+export const ChannelName = styled.h3`
+  font-size: 24px;
+  font-weight: 600;
+  margin-top: 24px;
+  margin-bottom: 8px;
+  margin-left: 32px;
+  color: ${theme.text.default};
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+`;
+
+export const ChannelDescription = styled.h4`
+  font-size: 18px;
+  font-weight: 400;
+  margin-left: 32px;
+  margin-bottom: 16px;
+  color: ${theme.text.alt};
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+`;
+
+export const MetadataContainer = styled.div`
+  margin-left: 32px;
+
+  @media (max-width: 768px;) {
+    margin-left: 8px;
+  }
 `;

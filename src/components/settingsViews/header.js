@@ -2,12 +2,13 @@
 import * as React from 'react';
 import Link from 'src/components/link';
 import { StyledHeader, Heading, Subheading, HeaderText } from './style';
-import Avatar from '../avatar';
+import { UserAvatar, CommunityAvatar } from '../avatar';
 
 type Props = {
   avatar?: {
     profilePhoto: string,
-    community: Object,
+    community?: Object,
+    user?: Object,
   },
   subheading: {
     to: string,
@@ -21,14 +22,23 @@ class Header extends React.Component<Props> {
     const { avatar, subheading, heading } = this.props;
     return (
       <StyledHeader>
-        {avatar && (
-          <Avatar
-            community={avatar.community}
-            src={avatar.profilePhoto}
-            size={'48'}
-            radius={8}
-          />
-        )}
+        {avatar &&
+          avatar.community && (
+            <CommunityAvatar
+              community={avatar.community}
+              showHoverProfile={false}
+              size={48}
+            />
+          )}
+        {avatar &&
+          avatar.user && (
+            <UserAvatar
+              showOnlineStatus={false}
+              showHoverProfile={false}
+              user={avatar.user}
+              size={48}
+            />
+          )}
         <HeaderText>
           <Link to={subheading.to}>
             <Subheading>{subheading.label}</Subheading>

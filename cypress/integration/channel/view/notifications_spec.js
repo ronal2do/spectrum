@@ -12,7 +12,7 @@ const { userId: memberInChannelId } = data.usersChannels.find(
 const QUIET_USER_ID = constants.QUIET_USER_ID;
 
 describe('channel notification preferences logged out', () => {
-  before(() => {
+  beforeEach(() => {
     cy.visit(`/${community.slug}/${channel.slug}`);
   });
 
@@ -24,37 +24,37 @@ describe('channel notification preferences logged out', () => {
 });
 
 describe('channel notification preferences as member', () => {
-  before(() => {
-    cy.auth(memberInChannelId);
-    cy.visit(`/${community.slug}/${channel.slug}`);
+  beforeEach(() => {
+    cy.auth(memberInChannelId).then(() =>
+      cy.visit(`/${community.slug}/${channel.slug}`)
+    );
   });
 
   it('should render notification settings', () => {
     cy.get('[data-cy="channel-view"]').should('be.visible');
 
-    cy
-      .get('[data-cy="notifications-checkbox-checked"]')
+    cy.get('[data-cy="notifications-checkbox-checked"]')
       .should('be.visible')
       .click();
 
-    cy
-      .get('[data-cy="notifications-checkbox-unchecked"]')
+    cy.get('[data-cy="notifications-checkbox-unchecked"]')
       .should('be.visible')
       .click();
   });
 });
 
 describe('channel profile as non-member', () => {
-  before(() => {
-    cy.auth(QUIET_USER_ID);
-    cy.visit(`/${community.slug}/${channel.slug}`);
+  beforeEach(() => {
+    cy.auth(QUIET_USER_ID).then(() =>
+      cy.visit(`/${community.slug}/${channel.slug}`)
+    );
   });
 
   it('should not render notifications settings', () => {
     cy.get('[data-cy="channel-view"]').should('be.visible');
 
-    cy
-      .get('[data-cy="notifications-checkbox-checked"]')
-      .should('not.be.visible');
+    cy.get('[data-cy="notifications-checkbox-checked"]').should(
+      'not.be.visible'
+    );
   });
 });

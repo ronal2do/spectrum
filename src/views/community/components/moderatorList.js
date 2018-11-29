@@ -12,15 +12,18 @@ import { Card } from 'src/components/card';
 import { Loading } from 'src/components/loading';
 import viewNetworkHandler from 'src/components/viewNetworkHandler';
 import ViewError from 'src/components/viewError';
-import { MessageIconContainer, UserListItemContainer } from '../style';
-import GranularUserProfile from '../../../components/granularUserProfile';
+import { MessageIconContainer, ListColumn } from '../style';
+import GranularUserProfile from 'src/components/granularUserProfile';
+import { UpsellTeamMembers } from 'src/components/upsell';
+import type { Dispatch } from 'redux';
+import { withCurrentUser } from 'src/components/withCurrentUser';
 
 type Props = {
   data: {
     community: GetCommunityMembersType,
     fetchMore: Function,
   },
-  dispatch: Function,
+  dispatch: Dispatch<Object>,
   isLoading: boolean,
   isFetchingMore: boolean,
   history: Object,
@@ -28,12 +31,19 @@ type Props = {
 };
 
 class CommunityModeratorList extends React.Component<Props> {
-  shouldComponentUpdate() {
+  shouldComponentUpdate(nextProps) {
     // NOTE(@brian) This is needed to avoid conflicting the the members tab in
     // the community view. See https://github.com/withspectrum/spectrum/pull/2613#pullrequestreview-105861623
     // for discussion
     // never update once we have the list of team members
-    if (this.props.data && this.props.data.community) return false;
+    if (
+      this.props.data &&
+      this.props.data.community &&
+      nextProps.data.community
+    ) {
+      if (this.props.data.community.id === nextProps.data.community.id)
+        return false;
+    }
     return true;
   }
 
@@ -43,43 +53,58 @@ class CommunityModeratorList extends React.Component<Props> {
   };
 
   render() {
-    const { data: { community }, isLoading, currentUser } = this.props;
+    const {
+      data: { community },
+      isLoading,
+      currentUser,
+    } = this.props;
 
     if (community && community.members) {
       const { edges: members } = community.members;
-      const nodes = members.map(member => member && member.node);
+      const nodes = members
+        .map(member => member && member.node)
+        .filter(node => node && (node.isOwner || node.isModerator))
+        .filter(Boolean);
+
+      const currentUserIsOwner =
+        currentUser &&
+        nodes.find(node => node.user.id === currentUser.id && node.isOwner);
 
       return (
-        <div>
+        <ListColumn>
           {nodes.map(node => {
-            if (!node) return null;
+            const { user } = node;
+
             return (
-              <UserListItemContainer key={node.user.id}>
-                <GranularUserProfile
-                  userObject={node.user}
-                  id={node.user.id}
-                  name={node.user.name}
-                  isCurrentUser={currentUser && node.user.id === currentUser.id}
-                  isOnline={node.user.isOnline}
-                  onlineSize={'small'}
-                  profilePhoto={node.user.profilePhoto}
-                  avatarSize={'32'}
-                  badges={node.roles}
-                >
-                  {currentUser &&
-                    node.user.id !== currentUser.id && (
-                      <MessageIconContainer>
-                        <Icon
-                          glyph={'message'}
-                          onClick={() => this.initMessage(node.user)}
-                        />
-                      </MessageIconContainer>
-                    )}
-                </GranularUserProfile>
-              </UserListItemContainer>
+              <GranularUserProfile
+                key={user.id}
+                userObject={user}
+                name={user.name}
+                profilePhoto={user.profilePhoto}
+                isCurrentUser={currentUser && user.id === currentUser.id}
+                isOnline={user.isOnline}
+                avatarSize={40}
+                showHoverProfile={false}
+              >
+                {currentUser &&
+                  node.user.id !== currentUser.id && (
+                    <MessageIconContainer>
+                      <Icon
+                        glyph={'message'}
+                        onClick={() => this.initMessage(node.user)}
+                      />
+                    </MessageIconContainer>
+                  )}
+              </GranularUserProfile>
             );
           })}
-        </div>
+          {currentUserIsOwner && (
+            <UpsellTeamMembers
+              communitySlug={community.slug}
+              small={nodes.length > 1}
+            />
+          )}
+        </ListColumn>
       );
     }
 
@@ -104,12 +129,10 @@ class CommunityModeratorList extends React.Component<Props> {
   }
 }
 
-const map = state => ({ currentUser: state.users.currentUser });
-
 export default compose(
-  // $FlowIssue
-  connect(map),
   withRouter,
+  withCurrentUser,
   getCommunityMembersQuery,
-  viewNetworkHandler
+  viewNetworkHandler,
+  connect()
 )(CommunityModeratorList);

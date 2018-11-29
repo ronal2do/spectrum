@@ -1,5 +1,5 @@
 // @flow
-const { db } = require('./db');
+const { db } = require('shared/db');
 import type { DBCommunity } from 'shared/types';
 
 export const getCommunityById = (id: string): Promise<Object> => {
@@ -21,41 +21,10 @@ export const getCommunities = (
 export const getTopCommunities = (amount: number): Array<Object> => {
   return db
     .table('communities')
-    .pluck('id')
-    .run()
-    .then(communities => communities.map(community => community.id))
-    .then(communityIds => {
-      return Promise.all(
-        communityIds.map(community => {
-          return db
-            .table('usersCommunities')
-            .getAll(community, { index: 'communityId' })
-            .filter({ isMember: true })
-            .count()
-            .run()
-            .then(count => {
-              return {
-                id: community,
-                count,
-              };
-            });
-        })
-      );
-    })
-    .then(data => {
-      let sortedCommunities = data
-        .sort((x, y) => {
-          return y.count - x.count;
-        })
-        .map(community => community.id)
-        .slice(0, amount);
-
-      return db
-        .table('communities')
-        .getAll(...sortedCommunities)
-        .filter(community => db.not(community.hasFields('deletedAt')))
-        .run();
-    });
+    .orderBy({ index: db.desc('memberCount') })
+    .filter(community => community.hasFields('deletedAt').not())
+    .limit(amount)
+    .run();
 };
 
 export const getCommunitiesWithMinimumMembers = (
@@ -63,15 +32,9 @@ export const getCommunitiesWithMinimumMembers = (
   communityIds: Array<string>
 ) => {
   return db
-    .table('usersCommunities')
-    .getAll(...communityIds, { index: 'communityId' })
-    .group('communityId')
-    .ungroup()
-    .filter(row =>
-      row('reduction')
-        .count()
-        .gt(min)
-    )
-    .map(row => row('group'))
+    .table('communities')
+    .between(min, db.maxval, { index: 'memberCount' })
+    .filter(community => community.hasFields('deletedAt').not())
+    .map(row => row('id'))
     .run();
 };

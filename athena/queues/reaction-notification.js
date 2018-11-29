@@ -13,7 +13,7 @@ import {
 import {
   storeUsersNotifications,
   markUsersNotificationsAsNew,
-} from '../models/usersNotifications';
+} from 'shared/db/queries/usersNotifications';
 import type { Job, ReactionNotificationJobData } from 'shared/bull/types';
 
 export default async (job: Job<ReactionNotificationJobData>) => {
@@ -77,14 +77,12 @@ export default async (job: Job<ReactionNotificationJobData>) => {
 
     debug('mark notification as new for sender');
 
-    // if the user is allowed to recieve notifications, update their notification
+    // if the user is allowed to receive notifications, update their notification
     return Promise.all([
       markUsersNotificationsAsNew(updatedNotification.id, message.senderId),
     ]).catch(err => {
-      debug('❌ Error in job:\n');
       debug(err);
       Raven.captureException(err);
-      console.log(err);
     });
   } else {
     // if no notification was found that matches our bundling criteria, create a new notification
@@ -124,7 +122,6 @@ export default async (job: Job<ReactionNotificationJobData>) => {
       debug('❌ Error in job:\n');
       debug(err);
       Raven.captureException(err);
-      console.log(err);
     });
   }
 };

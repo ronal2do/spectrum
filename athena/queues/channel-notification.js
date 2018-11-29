@@ -12,7 +12,7 @@ import {
 import {
   storeUsersNotifications,
   markUsersNotificationsAsNew,
-} from '../models/usersNotifications';
+} from 'shared/db/queries/usersNotifications';
 import type { Job, ChannelNotificationJobData } from 'shared/bull/types';
 
 export default async (job: Job<ChannelNotificationJobData>) => {
@@ -91,6 +91,5 @@ export default async (job: Job<ChannelNotificationJobData>) => {
     debug('❌ Error in job:\n');
     debug(err);
     Raven.captureException(err);
-    console.log(err);
   });
 };

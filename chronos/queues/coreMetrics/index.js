@@ -1,5 +1,6 @@
 // @flow
 const debug = require('debug')('chronos:queue:process-core-metrics');
+import Raven from 'shared/raven';
 import {
   saveCoreMetrics,
   getAu,
@@ -71,14 +72,6 @@ export default async () => {
   // 13
   const dmThreads = await getCount('directMessageThreads');
 
-  // 14
-  const threadMessages = await getCount('messages', { threadType: 'story' });
-
-  // 15
-  const dmMessages = await getCount('messages', {
-    threadType: 'directMessageThread',
-  });
-
   const coreMetrics = {
     dau,
     wau,
@@ -96,13 +89,13 @@ export default async () => {
     communities,
     threads,
     dmThreads,
-    threadMessages,
-    dmMessages,
   };
 
   try {
     return saveCoreMetrics(coreMetrics);
   } catch (err) {
-    console.log(err);
+    debug('❌ Error in job:\n');
+    debug(err);
+    Raven.captureException(err);
   }
 };

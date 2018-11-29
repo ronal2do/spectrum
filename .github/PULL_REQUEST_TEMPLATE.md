@@ -7,16 +7,23 @@
 **Deploy after merge (delete what needn't be deployed)**
 - api
 - hyperion (frontend)
+- desktop
 - athena
 - vulcan
 - mercury
 - hermes
 - chronos
 - mobile
+- analytics
 
 **Run database migrations (delete if no migration was added)**
 YES
 
 **Release notes for users (delete if codebase-only change)**
 -
+
+**Related issues (delete if you don't know of any)**
+Closes #
+
+<!-- If there are UI changes please share mobile and desktop screenshots or recordings. -->
 

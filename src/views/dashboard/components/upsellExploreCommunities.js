@@ -4,10 +4,12 @@ import { getCommunitiesByCuratedContentType } from 'shared/graphql/queries/commu
 import type { GetCommunitiesType } from 'shared/graphql/queries/community/getCommunities';
 import type { GetCommunityType } from 'shared/graphql/queries/community/getCommunity';
 import { connect } from 'react-redux';
-import Link from '../../../components/link';
+import Link from 'src/components/link';
 import compose from 'recompose/compose';
-import viewNetworkHandler from '../../../components/viewNetworkHandler';
-import { CommunityListAvatar, UpsellRow } from '../style';
+import viewNetworkHandler from 'src/components/viewNetworkHandler';
+import { CommunityAvatarContainer, UpsellRow } from '../style';
+import { track, events } from 'src/helpers/analytics';
+import { CommunityAvatar } from 'src/components/avatar';
 
 const getRandom = (arr, n) => {
   let result = new Array(n),
@@ -101,7 +103,6 @@ class UpsellExploreCommunities extends React.Component<Props, State> {
   }
 
   render() {
-    const { activeCommunity } = this.props;
     const { communitiesToJoin } = this.state;
 
     if (communitiesToJoin && communitiesToJoin.length > 0) {
@@ -110,11 +111,14 @@ class UpsellExploreCommunities extends React.Component<Props, State> {
           {communitiesToJoin.map(c => {
             if (!c) return null;
             return (
-              <Link to={`/${c.slug}`} key={c.id}>
-                <CommunityListAvatar
-                  active={c.id === activeCommunity}
-                  src={c.profilePhoto}
-                />
+              <Link
+                to={`/${c.slug}`}
+                key={c.id}
+                onClick={() => track(events.INBOX_UPSELL_COMMUNITY_CLICKED)}
+              >
+                <CommunityAvatarContainer>
+                  <CommunityAvatar community={c} isClickable={false} />
+                </CommunityAvatarContainer>
               </Link>
             );
           })}

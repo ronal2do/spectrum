@@ -28,6 +28,11 @@
       },
       {
         "kind": "SCALAR",
+        "name": "LowercaseString",
+        "possibleTypes": null
+      },
+      {
+        "kind": "SCALAR",
         "name": "Int",
         "possibleTypes": null
       },
@@ -179,16 +184,6 @@
       {
         "kind": "OBJECT",
         "name": "EverythingThreadEdge",
-        "possibleTypes": null
-      },
-      {
-        "kind": "OBJECT",
-        "name": "RecurringPayment",
-        "possibleTypes": null
-      },
-      {
-        "kind": "OBJECT",
-        "name": "Invoice",
         "possibleTypes": null
       },
       {

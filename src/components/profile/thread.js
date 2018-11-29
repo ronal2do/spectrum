@@ -5,7 +5,7 @@ import compose from 'recompose/compose';
 import Link from 'src/components/link';
 import { connect } from 'react-redux';
 import { ThreadListItem } from '../listItems';
-import { ProfileCard } from './style';
+import { ThreadProfileCard } from './style';
 import type { GetThreadType } from 'shared/graphql/queries/thread/getThread';
 
 type Props = {
@@ -14,23 +14,42 @@ type Props = {
     error: ?string,
   },
   setName: Function,
+  markAsDeleted: Function,
+  id: string,
+  children: any,
 };
 
 class ThreadWithData extends React.Component<Props> {
-  componentWillMount() {
-    const { data: { thread }, setName } = this.props;
+  componentDidMount() {
+    const {
+      data: { thread },
+      data,
+      setName,
+      markAsDeleted,
+      id,
+    } = this.props;
+
     if (setName && thread) {
-      this.props.setName(thread.community.name);
+      setName(thread.community.name);
+    }
+
+    // if the query finished loading but no thread was returned,
+    // clear this notification out
+    if (data.networkStatus === 7 && !data.thread && markAsDeleted) {
+      markAsDeleted(id);
     }
   }
+
   render() {
-    const { data: { thread, error } } = this.props;
+    const {
+      data: { thread, error },
+    } = this.props;
     if (error || !thread) {
       return null;
     }
 
     return (
-      <ProfileCard>
+      <ThreadProfileCard>
         <Link
           to={{
             search: `?thread=${thread.id}`,
@@ -44,9 +63,12 @@ class ThreadWithData extends React.Component<Props> {
             }`}
           />
         </Link>
-      </ProfileCard>
+      </ThreadProfileCard>
     );
   }
 }
 
-export default compose(connect(), withRouter)(ThreadWithData);
+export default compose(
+  connect(),
+  withRouter
+)(ThreadWithData);

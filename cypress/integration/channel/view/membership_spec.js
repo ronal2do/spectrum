@@ -28,37 +28,27 @@ const { userId: memberInPrivateChannelId } = data.usersChannels.find(
 const QUIET_USER_ID = constants.QUIET_USER_ID;
 
 const leave = () => {
-  cy
-    .get('[data-cy="channel-join-button"]')
+  cy.get('[data-cy="channel-leave-button"]')
     .should('be.visible')
-    .contains('Joined');
+    .contains('Leave channel');
 
-  cy.get('[data-cy="channel-join-button"]').click();
-
-  cy.get('[data-cy="channel-join-button"]').should('be.disabled');
-
-  cy.get('[data-cy="channel-join-button"]').should('not.be.disabled');
+  cy.get('[data-cy="channel-leave-button"]').click();
 
   cy.get('[data-cy="channel-join-button"]').contains(`Join `);
 };
 
 const join = () => {
-  cy
-    .get('[data-cy="channel-join-button"]')
+  cy.get('[data-cy="channel-join-button"]')
     .should('be.visible')
     .contains('Join ');
 
   cy.get('[data-cy="channel-join-button"]').click();
 
-  cy.get('[data-cy="channel-join-button"]').should('be.disabled');
-
-  cy.get('[data-cy="channel-join-button"]').should('not.be.disabled');
-
-  cy.get('[data-cy="channel-join-button"]').contains(`Joined`);
+  cy.get('[data-cy="channel-leave-button"]').contains(`Leave channel`);
 };
 
 describe('logged out channel membership', () => {
-  before(() => {
+  beforeEach(() => {
     cy.visit(`/${community.slug}/${publicChannel.slug}`);
   });
 
@@ -68,9 +58,10 @@ describe('logged out channel membership', () => {
 });
 
 describe('channel profile as member', () => {
-  before(() => {
-    cy.auth(memberInChannelId);
-    cy.visit(`/${community.slug}/${publicChannel.slug}`);
+  beforeEach(() => {
+    cy.auth(memberInChannelId).then(() =>
+      cy.visit(`/${community.slug}/${publicChannel.slug}`)
+    );
   });
 
   it('should render leave channel button', () => {
@@ -80,9 +71,10 @@ describe('channel profile as member', () => {
 });
 
 describe('channel profile as non-member', () => {
-  before(() => {
-    cy.auth(QUIET_USER_ID);
-    cy.visit(`/${community.slug}/${publicChannel.slug}`);
+  beforeEach(() => {
+    cy.auth(QUIET_USER_ID).then(() =>
+      cy.visit(`/${community.slug}/${publicChannel.slug}`)
+    );
   });
 
   it('should render join channel button', () => {
@@ -92,14 +84,14 @@ describe('channel profile as non-member', () => {
 });
 
 describe('channel profile as owner', () => {
-  before(() => {
-    cy.auth(ownerInChannelId);
-    cy.visit(`/${community.slug}/${publicChannel.slug}`);
+  beforeEach(() => {
+    cy.auth(ownerInChannelId).then(() =>
+      cy.visit(`/${community.slug}/${publicChannel.slug}`)
+    );
   });
 
   it('should render settings button', () => {
-    cy
-      .get('[data-cy="channel-settings-button"]')
+    cy.get('[data-cy="channel-settings-button"]')
       .should('be.visible')
       .contains('Settings');
   });
@@ -107,9 +99,10 @@ describe('channel profile as owner', () => {
 
 describe('private channel profile', () => {
   describe('private channel as member', () => {
-    before(() => {
-      cy.auth(memberInPrivateChannelId);
-      cy.visit(`/${community.slug}/${privateChannel.slug}`);
+    beforeEach(() => {
+      cy.auth(memberInPrivateChannelId).then(() =>
+        cy.visit(`/${community.slug}/${privateChannel.slug}`)
+      );
     });
 
     it('should render profile', () => {
@@ -118,23 +111,14 @@ describe('private channel profile', () => {
   });
 
   describe('private channel as non-member', () => {
-    before(() => {
-      cy.auth(QUIET_USER_ID);
-      cy.visit(`/${community.slug}/${privateChannel.slug}`);
+    beforeEach(() => {
+      cy.auth(QUIET_USER_ID).then(() =>
+        cy.visit(`/${community.slug}/${privateChannel.slug}`)
+      );
     });
 
-    it('should render request to join view', () => {
-      cy.get('[data-cy="channel-view-is-restricted"]').should('be.visible');
-
-      cy
-        .get('[data-cy="request-to-join-private-channel-button"]')
-        .contains(`Request to join ${privateChannel.name}`)
-        .click();
-
-      cy
-        .get('[data-cy="cancel-request-to-join-private-channel-button"]')
-        .contains('Cancel request')
-        .click();
+    it('should render channel not found view', () => {
+      cy.get('[data-cy="channel-not-found"]').should('be.visible');
     });
   });
 });

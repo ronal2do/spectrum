@@ -1,4 +1,5 @@
 // @flow
+import theme from 'shared/theme';
 import styled, { css } from 'styled-components';
 import Link from '../../components/link';
 import { Button } from '../../components/buttons';
@@ -14,15 +15,13 @@ import {
   Gradient,
 } from '../../components/globals';
 
-export const Page = styled.div`
+export const Page = styled.main`
   position: relative;
   display: grid;
   grid-template-rows: 1fr;
   grid-template-columns: 1fr;
   grid-template-areas: 'content';
-  overflow: auto;
-  overflow-x: hidden;
-  background-color: ${({ theme }) => theme.bg.default};
+  background-color: ${theme.bg.default};
 `;
 
 export const Wrapper = styled(FlexCol)`
@@ -32,7 +31,7 @@ export const Wrapper = styled(FlexCol)`
   min-width: 100vw;
   width: 100%;
   max-width: 100vw;
-  background-color: ${({ theme }) => theme.bg.default};
+  background-color: ${theme.bg.default};
   overflow: hidden;
   z-index: ${zIndex.base};
 `;
@@ -142,29 +141,29 @@ export const PrimaryCTA = styled(Button)`
   font-weight: 700;
   font-size: 16px;
   border-radius: 12px;
-  background-color: ${props => props.theme.bg.default};
+  background-color: ${theme.bg.default};
   background-image: none;
-  color: ${props => props.theme.brand.alt};
+  color: ${theme.brand.alt};
   transition: ${Transition.hover.off};
   z-index: ${zIndex.card};
 
   &:hover {
-    background-color: ${props => props.theme.bg.default};
-    color: ${props => props.theme.brand.default};
+    background-color: ${theme.bg.default};
+    color: ${theme.brand.default};
     box-shadow: ${Shadow.high} ${props => hexa(props.theme.bg.reverse, 0.5)};
     transition: ${Transition.hover.on};
   }
 `;
 
 export const SecondaryCTA = styled(PrimaryCTA)`
-  color: ${props => props.theme.text.reverse};
+  color: ${theme.text.reverse};
   background-color: transparent;
   border: 2px solid transparent;
 
   &:hover {
-    color: ${props => props.theme.text.reverse};
+    color: ${theme.text.reverse};
     background-color: transparent;
-    border-color: ${props => props.theme.bg.default};
+    border-color: ${theme.bg.default};
     box-shadow: 0 0 8px 4px ${props => hexa(props.theme.bg.default, 0.5)};
   }
 `;
@@ -176,7 +175,7 @@ export const SignInButton = styled.a`
   flex-direction: flex-row;
   align-self: flex-start;
   align-items: center;
-  color: ${({ theme }) => theme.text.reverse};
+  color: ${theme.text.reverse};
   border-radius: 8px;
   padding: 8px;
   padding-right: 16px;
@@ -189,7 +188,7 @@ export const SignInButton = styled.a`
   ${props =>
     props.after &&
     `
-			margin: 24px 0;
+  		margin: 24px 0;
 
 			&:after {
 				content: 'Previously signed in with';
@@ -239,7 +238,9 @@ export const ButtonTwitter = styled(Button)`
   color: ${props =>
     props.whitebg
       ? props.theme.social.twitter.default
-      : props.preferred ? '#fff' : 'rgba(255,255,255,0.8)'};
+      : props.preferred
+        ? '#fff'
+        : 'rgba(255,255,255,0.8)'};
 
   &:hover {
     color: ${props =>
@@ -253,7 +254,9 @@ export const ButtonFacebook = styled(Button)`
   color: ${props =>
     props.whitebg
       ? props.theme.social.facebook.default
-      : props.preferred ? '#fff' : 'rgba(255,255,255,0.8)'};
+      : props.preferred
+        ? '#fff'
+        : 'rgba(255,255,255,0.8)'};
 
   &:hover {
     color: ${props =>
@@ -267,7 +270,9 @@ export const ButtonGoogle = styled(Button)`
   color: ${props =>
     props.whitebg
       ? props.theme.social.google.default
-      : props.preferred ? '#fff' : 'rgba(255,255,255,0.8)'};
+      : props.preferred
+        ? '#fff'
+        : 'rgba(255,255,255,0.8)'};
 
   &:hover {
     color: ${props =>
@@ -275,17 +280,111 @@ export const ButtonGoogle = styled(Button)`
   }
 `;
 
-export const Footer = styled(FlexRow)`
+export const Footer = styled.div`
+  display: flex;
+  justify-content: stretch;
+  align-content: stretch;
+  flex: none;
   position: relative;
-  flex: auto;
-  justify-content: space-between;
-  padding: 24px 24px 24px 40px;
-  background-color: ${({ theme }) => theme.bg.reverse};
-  color: ${({ theme }) => theme.text.reverse};
+  padding: 32px;
+  background-color: ${theme.bg.reverse};
+  color: ${theme.text.reverse};
+`;
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-    padding: 20px;
+export const FooterGrid = styled.div`
+  flex: auto;
+  display: grid;
+  grid-template-columns: auto 1fr repeat(3, minmax(160px, auto));
+  grid-template-rows: 1fr;
+  grid-column-gap: 32px;
+  grid-template-areas: 'masthead . apps support safety';
+  align-items: flex-start;
+  justify-items: flex-start;
+
+  @media (max-width: 800px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-column-gap: 0;
+    grid-row-gap: 32px;
+    grid-template-areas: 'masthead' 'apps' 'support' 'safety';
+  }
+`;
+
+export const FooterSection = styled.div`
+  display: flex;
+  flex-direction: column;
+
+  font-weight: 500;
+  font-size: 16px;
+
+  span {
+    color: ${theme.text.alt};
+    font-weight: 700;
+  }
+`;
+
+export const Masthead = styled(FooterSection)`
+  grid-area: masthead;
+`;
+
+export const LinkSection = styled(FooterSection)`
+  a {
+    position: relative;
+    padding-bottom: 2px;
+    display: inline-block;
+    align-self: flex-start;
+
+    &:after {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      content: '';
+      height: 2px;
+      width: 0%;
+      opacity: 0;
+      background-color: ${theme.text.reverse};
+      transition: opacity 0.2s ease-in-out, width 0.2s ease-in-out;
+    }
+
+    &:hover {
+      &:after {
+        width: 100%;
+        opacity: 1;
+        transition: opacity 0.2s ease-in-out, width 0.2s ease-in-out;
+      }
+    }
+  }
+
+  span + a,
+  a + a {
+    margin-top: 8px;
+  }
+`;
+
+export const Support = styled(LinkSection)`
+  grid-area: support;
+`;
+
+export const Apps = styled(LinkSection)`
+  grid-area: apps;
+`;
+
+export const Safety = styled(LinkSection)`
+  grid-area: safety;
+
+  span + a,
+  a + a {
+    margin-top: 8px;
+  }
+`;
+
+export const SocialLinks = styled.div`
+  display: flex;
+  flex-direction: row;
+  margin-top: 16px;
+
+  > a + a {
+    margin-left: 8px;
   }
 `;
 
@@ -310,8 +409,8 @@ export const LinkBlock = styled(Link)`
     border-radius: 12px;
 
     &:hover {
-      background-color: ${({ theme }) => theme.bg.default};
-      color: ${({ theme }) => theme.text.default};
+      background-color: ${theme.bg.default};
+      color: ${theme.text.default};
       transition: ${Transition.hover.on};
     }
   }
@@ -352,8 +451,8 @@ export const LinkBlockA = styled.a`
     border-radius: 12px;
 
     &:hover {
-      background-color: ${({ theme }) => theme.bg.default};
-      color: ${({ theme }) => theme.text.default};
+      background-color: ${theme.bg.default};
+      color: ${theme.text.default};
       transition: ${Transition.hover.on};
     }
   }
@@ -390,7 +489,7 @@ export const Tabs = styled.div`
   grid-template-columns: auto 1fr repeat(3, auto);
   grid-column-gap: 32px;
   grid-template-rows: auto;
-  grid-template-areas: 'logo . pricing support auth';
+  grid-template-areas: 'logo . features apps support auth';
   align-items: center;
   justify-items: center;
   color: ${props =>
@@ -408,14 +507,14 @@ export const Tabs = styled.div`
     props.dark &&
     css`
       button {
-        color: ${props => props.theme.brand.alt};
+        color: ${theme.brand.alt};
         background-image: none;
-        background-color: ${props => props.theme.bg.default};
+        background-color: ${theme.bg.default};
 
         &:hover {
-          color: ${props => props.theme.brand.default};
-          background-color: ${props => props.theme.bg.default};
-          box-shadow: 0 0 16px ${props => props.theme.brand.border};
+          color: ${theme.brand.default};
+          background-color: ${theme.bg.default};
+          box-shadow: 0 0 16px ${theme.brand.border};
         }
       }
     `};
@@ -427,14 +526,22 @@ export const Tab = styled(Link)`
   font-weight: ${props => (props.selected ? '700' : '500')};
   color: ${props =>
     props.selected
-      ? props.dark ? props.theme.text.reverse : props.theme.text.default
-      : props.dark ? props.theme.text.reverse : props.theme.text.alt};
+      ? props.dark
+        ? props.theme.text.reverse
+        : props.theme.text.default
+      : props.dark
+        ? props.theme.text.reverse
+        : props.theme.text.alt};
 
   &:hover {
     color: ${props =>
       props.selected
-        ? props.dark ? props.theme.text.reverse : props.theme.text.default
-        : props.dark ? props.theme.text.reverse : props.theme.text.alt};
+        ? props.dark
+          ? props.theme.text.reverse
+          : props.theme.text.default
+        : props.dark
+          ? props.theme.text.reverse
+          : props.theme.text.alt};
     text-shadow: ${props =>
       props.dark ? `0 0 32px ${hexa(props.theme.text.reverse, 0.75)}` : 'none'};
   }
@@ -462,113 +569,63 @@ export const LogoTab = styled(Tab)`
   }
 `;
 
-const DropdownLink = styled(Link)`
+export const DropdownLink = styled(Link)`
   padding: 16px 0;
-  margin: 0 16px;
-  font-weight: 500;
+  font-weight: ${props => (props.selected ? '600' : '500')};
   display: flex;
+  width: 100%;
   align-items: center;
-  display: grid;
-  grid-template-columns: auto auto 1fr auto;
-  grid-template-rows: 1fr;
-  grid-template-areas: 'icon label . arrow';
   transition: ${Transition.hover.off};
   color: ${props =>
-    props.selected ? props.theme.text.placeholder : props.theme.brand.alt};
-
-  > div:last-of-type {
-    grid-area: arrow;
-    opacity: 0;
-    display: ${props => (props.selected ? 'none' : 'inline-block')};
-    transition: ${Transition.hover.off};
-  }
-
-  > div:first-of-type {
-    grid-area: icon;
-    margin-right: 16px;
-  }
-
-  > span {
-    grid-area: label;
-  }
+    props.selected ? props.theme.brand.alt : props.theme.text.alt};
+  border-radius: 8px;
 
   &:hover {
     transition: ${Transition.hover.on};
     color: ${props =>
-      props.selected ? props.theme.text.alt : props.theme.brand.default};
-
-    > div:last-of-type {
-      opacity: 1;
-      transition: ${Transition.hover.on};
-    }
+      props.selected ? props.theme.brand.default : props.theme.text.secondary};
   }
 `;
 
 export const LogoLink = styled(DropdownLink)`
-  grid-area: logo;
-  padding: 0;
-  color: ${props => props.theme.text.placeholder};
-
-  > div:last-of-type {
-    opacity: 1;
-    display: inline-block;
-  }
+  color: ${theme.text.placeholder};
+  margin-bottom: 16px;
 
   &:hover {
-    color: ${props => props.theme.brand.alt};
+    color: ${theme.brand.alt};
   }
 `;
 
 export const FeaturesLink = styled(DropdownLink)`
   grid-area: features;
-  border-top: 2px solid ${props => props.theme.bg.border};
 `;
 
-export const PricingLink = styled(DropdownLink)`
-  grid-area: pricing;
-  border: none;
+export const AppsLink = styled(DropdownLink)`
+  grid-area: apps;
 `;
 
 export const SupportLink = styled(DropdownLink)`
   grid-area: support;
-  border-top: 2px solid ${props => props.theme.bg.border};
 `;
 
 export const ExploreLink = styled(DropdownLink)`
   grid-area: explore;
-  border-top: 2px solid ${props => props.theme.bg.border};
 `;
 
 export const AuthLink = styled(DropdownLink)`
-  grid-area: auth;
   margin: 0;
-  padding: 16px;
+  margin-top: 24px;
+  padding: 16px 0;
   font-weight: 700;
   border-top: none;
-  color: ${props => props.theme.text.reverse};
-  background-color: ${props => props.theme.brand.alt};
+  color: ${theme.text.reverse};
   background-image: ${props =>
     Gradient(props.theme.brand.alt, props.theme.brand.default)};
-
-  > div > div {
-    box-shadow: 0 0 0 2px ${props => props.theme.bg.default};
-  }
+  justify-content: center;
 
   &:hover {
-    color: ${props => props.theme.text.reverse};
+    color: ${theme.text.reverse};
     text-shadow: 0 0 32px ${props => hexa(props.theme.text.reverse, 0.5)};
-  }
-
-  > div:first-of-type {
-    grid-area: icon;
-  }
-
-  > span {
-    grid-area: label;
-  }
-
-  > div:last-of-type {
-    grid-area: arrow;
   }
 `;
 
@@ -576,21 +633,23 @@ export const MenuContainer = styled.div`
   position: fixed;
   display: grid;
   grid-template-columns: auto;
-  grid-template-rows: auto 16px repeat(3, auto) 1fr auto;
-  grid-template-areas: 'logo' '.' 'pricing' 'support' 'explore' '.' 'auth';
+  grid-template-rows: auto 16px repeat(5, auto) 1fr auto;
+  grid-template-areas: 'logo' '.' 'features' 'apps' 'support' 'explore' '.' 'auth';
   align-content: start;
   left: 0;
   top: 0;
   bottom: 0;
   height: 100vh;
   width: 300px;
-  color: ${props => props.theme.brand.alt};
-  background-color: ${props => props.theme.bg.default};
+  padding: 16px;
+  color: ${theme.brand.alt};
+  background-color: ${theme.bg.default};
   background-image: ${props =>
     Gradient(props.theme.bg.default, props.theme.bg.wash)};
   box-shadow: ${Shadow.high} ${props => hexa(props.theme.bg.reverse, 0.25)};
   padding-top: 32px;
   z-index: 2;
+  flex-direction: column;
 `;
 
 export const MenuOverlay = styled.div`
@@ -624,7 +683,7 @@ export const MenuTab = styled.div`
   }
 
   ${MenuContainer} {
-    display: ${props => (props.open ? 'grid' : 'none')};
+    display: ${props => (props.open ? 'flex' : 'none')};
   }
 
   @media (min-width: 768px) {
@@ -632,16 +691,16 @@ export const MenuTab = styled.div`
   }
 `;
 
-export const PricingTab = styled(Tab)`
-  grid-area: pricing;
+export const FeaturesTab = styled(Tab)`
+  grid-area: features;
 
   @media (max-width: 768px) {
     display: none;
   }
 `;
 
-export const FeaturesTab = styled(Tab)`
-  grid-area: features;
+export const AppsTab = styled(Tab)`
+  grid-area: apps;
 
   @media (max-width: 768px) {
     display: none;
@@ -667,14 +726,14 @@ export const AuthTab = styled.div`
     ${props =>
       props.dark &&
       css`
-        color: ${props => props.theme.brand.alt};
+        color: ${theme.brand.alt};
         background-image: none;
-        background-color: ${props => props.theme.bg.default};
+        background-color: ${theme.bg.default};
 
         &:hover {
-          color: ${props => props.theme.brand.default};
-          background-color: ${props => props.theme.bg.default};
-          box-shadow: 0 0 16px ${props => props.theme.brand.border};
+          color: ${theme.brand.default};
+          background-color: ${theme.bg.default};
+          box-shadow: 0 0 16px ${theme.brand.border};
         }
       `};
   }

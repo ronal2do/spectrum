@@ -8,32 +8,32 @@ const { userId: ownerInChannelId } = data.usersChannels.find(
   ({ channelId, isOwner }) => channelId === channel.id && isOwner
 );
 
+const enable = () => {
+  cy.get('[data-cy="channel-overview"]').should('be.visible');
+
+  cy.get('[data-cy="login-with-token-settings"]').scrollIntoView();
+
+  cy.get('[data-cy="toggle-token-link-invites-unchecked"]')
+    .should('be.visible')
+    .click();
+
+  cy.get('[data-cy="join-link-input"]').should('be.visible');
+};
+
 describe('private channel invite link settings', () => {
   beforeEach(() => {
-    cy.auth(ownerInChannelId);
-    cy.visit(`/${community.slug}/${channel.slug}/settings`);
+    cy.auth(ownerInChannelId).then(() =>
+      cy.visit(`/${community.slug}/${channel.slug}/settings`)
+    );
   });
 
-  it('should enable private invite link', () => {
-    cy.get('[data-cy="channel-overview"]').should('be.visible');
+  it('should handle enable, reset, and disable', () => {
+    // enable
+    enable();
 
+    // reset token
     cy.get('[data-cy="login-with-token-settings"]').scrollIntoView();
-
-    cy
-      .get('[data-cy="toggle-token-link-invites-unchecked"]')
-      .should('be.visible')
-      .click();
-
-    cy.get('[data-cy="join-link-input"]').should('be.visible');
-  });
-
-  it('should refresh invite link token', () => {
-    cy.get('[data-cy="channel-overview"]').should('be.visible');
-
-    cy.get('[data-cy="login-with-token-settings"]').scrollIntoView();
-
-    cy
-      .get('[data-cy="join-link-input"]')
+    cy.get('[data-cy="join-link-input"]')
       .invoke('val')
       .then(val1 => {
         // do more work here
@@ -43,27 +43,15 @@ describe('private channel invite link settings', () => {
 
         cy.get('[data-cy="refresh-join-link-token"]').click();
 
-        cy.get('[data-cy="refresh-join-link-token"]').should('be.disabled');
-        cy.get('[data-cy="refresh-join-link-token"]').should('not.be.disabled');
-
         // grab the input again and compare its previous value
         // to the current value
-        cy
-          .get('[data-cy="join-link-input"]')
+        cy.get('[data-cy="join-link-input"]')
           .invoke('val')
-          .should(val2 => {
-            expect(val1).not.to.eq(val2);
-          });
+          .should('not.eq', val1);
       });
-  });
 
-  it('should disable private invite link', () => {
-    cy.get('[data-cy="channel-overview"]').should('be.visible');
-
-    cy.get('[data-cy="login-with-token-settings"]').scrollIntoView();
-
-    cy
-      .get('[data-cy="toggle-token-link-invites-checked"]')
+    // disable
+    cy.get('[data-cy="toggle-token-link-invites-checked"]')
       .should('be.visible')
       .click();
 

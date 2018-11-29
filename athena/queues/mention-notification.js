@@ -1,5 +1,6 @@
 // @flow
 const debug = require('debug')('athena:queue:mention-notification');
+import Raven from '../../shared/raven';
 import { toPlainText, toState } from 'shared/draft-utils';
 import truncate from 'shared/truncate';
 import { fetchPayload } from '../utils/payloads';
@@ -10,15 +11,16 @@ import { getMessageById } from '../models/message';
 import { getUserPermissionsInCommunity } from '../models/usersCommunities';
 import { getCommunityById } from '../models/community';
 import { getUsersThread } from '../models/usersThreads';
-import { storeUsersNotifications } from '../models/usersNotifications';
+import { storeUsersNotifications } from 'shared/db/queries/usersNotifications';
 import { getUserPermissionsInChannel } from '../models/usersChannels';
 import { getThreadById } from '../models/thread';
-import { getUserByUsername, getUserById } from '../models/user';
+import { getUserByUsername, getUserById } from 'shared/db/queries/user';
 import {
   sendNewMentionThreadEmailQueue,
   sendNewMentionMessageEmailQueue,
 } from 'shared/bull/queues';
 import type { Job, MentionNotificationJobData } from 'shared/bull/types';
+import { signUser, signThread, signMessage, signCommunity } from 'shared/imgix';
 
 export default async ({ data }: Job<MentionNotificationJobData>) => {
   debug('mention job created');
@@ -49,21 +51,29 @@ export default async ({ data }: Job<MentionNotificationJobData>) => {
   // dont send any notification about the mention
   if (!thread || thread.deletedAt) return;
 
-  const { isPrivate } = await getChannelById(thread.channelId);
+  const { isPrivate: channelIsPrivate } = await getChannelById(
+    thread.channelId
+  );
+  const { isPrivate: communityIsPrivate } = await getCommunityById(
+    thread.communityId
+  );
   const {
     isBlocked: isBlockedInCommunity,
+    isMember: isMemberInCommunity,
   } = await getUserPermissionsInCommunity(thread.communityId, recipient.id);
   const {
     isMember: isMemberInChannel,
     isBlocked: isBlockedInChannel,
   } = await getUserPermissionsInChannel(recipient.id, thread.channelId);
-  // don't notify people where they are blocked, or where the channel is private and they aren't a member
+
   if (
     isBlockedInCommunity ||
     isBlockedInChannel ||
-    (isPrivate && !isMemberInChannel)
-  )
+    (channelIsPrivate && !isMemberInChannel) ||
+    (communityIsPrivate && !isMemberInCommunity)
+  ) {
     return;
+  }
 
   // see if a usersThreads record exists. If it does, and notifications are muted, we
   // should not send an email. If the record doesn't exist, it means the person being
@@ -126,13 +136,15 @@ export default async ({ data }: Job<MentionNotificationJobData>) => {
     getChannelById(thread.channelId),
   ]);
 
+  const signedThread = signThread(thread);
+
   // compose preview text for the email
   const rawThreadBody =
-    thread.type === 'DRAFTJS'
-      ? thread.content.body
-        ? toPlainText(toState(JSON.parse(thread.content.body)))
+    signedThread.type === 'DRAFTJS'
+      ? signedThread.content.body
+        ? toPlainText(toState(JSON.parse(signedThread.content.body)))
         : ''
-      : thread.content.body || '';
+      : signedThread.content.body || '';
 
   const threadBody =
     rawThreadBody && rawThreadBody.length > 10
@@ -140,8 +152,10 @@ export default async ({ data }: Job<MentionNotificationJobData>) => {
       : rawThreadBody.trim();
   const primaryActionLabel = 'View conversation';
 
-  const rawMessageBody = message
-    ? toPlainText(toState(JSON.parse(message.content.body)))
+  const signedMessage = message ? signMessage(message) : null;
+
+  const rawMessageBody = signedMessage
+    ? toPlainText(toState(JSON.parse(signedMessage.content.body)))
     : '';
 
   // if the message was super long, truncate it
@@ -153,15 +167,18 @@ export default async ({ data }: Job<MentionNotificationJobData>) => {
       ? sendNewMentionThreadEmailQueue
       : sendNewMentionMessageEmailQueue;
 
+  const signedSender = signUser(sender);
+  const signedCommunity = signCommunity(community);
+
   return Promise.all([
     queue.add({
       recipient,
-      sender,
+      sender: signedSender,
       primaryActionLabel,
       thread: {
         ...thread,
-        creator: sender,
-        community,
+        creator: signedSender,
+        community: signedCommunity,
         channel,
         content: {
           title: thread.content.title,
@@ -170,12 +187,16 @@ export default async ({ data }: Job<MentionNotificationJobData>) => {
       },
       message: {
         ...message,
-        sender,
+        sender: signedSender,
         content: {
           body: messageBody,
         },
       },
     }),
     storeUsersNotifications(storedNotification.id, recipient.id),
-  ]);
+  ]).catch(err => {
+    debug('❌ Error in job:\n');
+    debug(err);
+    Raven.captureException(err);
+  });
 };

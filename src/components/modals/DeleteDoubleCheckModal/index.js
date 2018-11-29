@@ -4,7 +4,6 @@ import { connect } from 'react-redux';
 import Modal from 'react-modal';
 import compose from 'recompose/compose';
 import { withRouter } from 'react-router';
-import { track } from '../../../helpers/events';
 import { closeModal } from '../../../actions/modals';
 import { addToastWithTimeout } from '../../../actions/toasts';
 import deleteCommunityMutation from 'shared/graphql/mutations/community/deleteCommunity';
@@ -16,13 +15,13 @@ import type { DeleteThreadType } from 'shared/graphql/mutations/thread/deleteThr
 import deleteMessage from 'shared/graphql/mutations/message/deleteMessage';
 import type { DeleteMessageType } from 'shared/graphql/mutations/message/deleteMessage';
 import archiveChannel from 'shared/graphql/mutations/channel/archiveChannel';
+import removeCommunityMember from 'shared/graphql/mutations/communityMember/removeCommunityMember';
 
 import ModalContainer from '../modalContainer';
 import { TextButton, Button } from '../../buttons';
 import { modalStyles } from '../styles';
 import { Actions, Message } from './style';
-import cancelSubscription from 'shared/graphql/mutations/community/cancelSubscription';
-import disableCommunityAnalytics from 'shared/graphql/mutations/community/disableCommunityAnalytics';
+import type { Dispatch } from 'redux';
 
 /*
   Generic component that should be used to confirm any 'delete' action.
@@ -43,22 +42,22 @@ type State = {
 };
 
 type Props = {
-  dispatch: Function,
+  dispatch: Dispatch<Object>,
   modalProps: {
     id: string,
     entity: string,
     redirect?: ?string,
     message?: ?string,
     buttonLabel?: string,
+    extraProps?: Object,
   },
   deleteMessage: Function,
   deleteCommunity: Function,
   deleteThread: Function,
   deleteChannel: Function,
-  cancelSubscription: Function,
-  disableCommunityAnalytics: Function,
   archiveChannel: Function,
-  dispatch: Function,
+  removeCommunityMember: Function,
+  dispatch: Dispatch<Object>,
   isOpen: boolean,
 };
 
@@ -72,7 +71,10 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
   };
 
   triggerDelete = () => {
-    const { modalProps: { id, entity, redirect }, dispatch } = this.props;
+    const {
+      modalProps: { id, entity, redirect },
+      dispatch,
+    } = this.props;
 
     this.setState({
       isLoading: true,
@@ -85,7 +87,6 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
           .then(({ data }: DeleteMessageType) => {
             const { deleteMessage } = data;
             if (deleteMessage) {
-              track('message', 'deleted', null);
               dispatch(addToastWithTimeout('neutral', 'Message deleted.'));
               this.setState({
                 isLoading: false,
@@ -108,7 +109,6 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
           .then(({ data }: DeleteThreadType) => {
             const { deleteThread } = data;
             if (deleteThread) {
-              track('thread', 'deleted', null);
               // TODO: When we figure out the mutation reducers in apollo
               // client we can just history push and trust the store to update
               // eslint-disable-next-line
@@ -137,7 +137,6 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
           .then(({ data }: DeleteChannelType) => {
             const { deleteChannel } = data;
             if (deleteChannel) {
-              track('channel', 'deleted', null);
               // TODO: When we figure out the mutation reducers in apollo
               // client we can just history push and trust the store to update
               // eslint-disable-next-line
@@ -166,7 +165,6 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
           .then(({ data }: DeleteCommunityType) => {
             const { deleteCommunity } = data;
             if (deleteCommunity) {
-              track('community', 'deleted', null);
               // TODO: When we figure out the mutation reducers in apollo
               // client we can just history push and trust the store to update
               // eslint-disable-next-line
@@ -194,45 +192,28 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
             });
           });
       }
-      case 'community-subscription': {
-        return this.props
-          .cancelSubscription({ communityId: id })
-          .then(() => {
-            dispatch(addToastWithTimeout('neutral', 'Subscription canceled'));
-            this.setState({
-              isLoading: false,
-            });
-            return this.close();
-          })
-          .catch(err => {
-            dispatch(addToastWithTimeout('error', err.message));
-            this.setState({
-              isLoading: false,
-            });
-          });
-      }
-      case 'community-analytics': {
-        return this.props
-          .disableCommunityAnalytics({ communityId: id })
-          .then(() => {
-            dispatch(addToastWithTimeout('neutral', 'Analytics removed'));
-            this.setState({
-              isLoading: false,
-            });
-            return this.close();
-          })
-          .catch(err => {
-            dispatch(addToastWithTimeout('error', err.message));
-            this.setState({
-              isLoading: false,
-            });
-          });
-      }
       case 'channel-archive': {
         return this.props
           .archiveChannel({ channelId: id })
           .then(() => {
             dispatch(addToastWithTimeout('neutral', 'Channel archived'));
+            this.setState({
+              isLoading: false,
+            });
+            return this.close();
+          })
+          .catch(err => {
+            dispatch(addToastWithTimeout('error', err.message));
+            this.setState({
+              isLoading: false,
+            });
+          });
+      }
+      case 'team-member-leaving-community': {
+        return this.props
+          .removeCommunityMember({ input: { communityId: id } })
+          .then(() => {
+            dispatch(addToastWithTimeout('neutral', 'Left community'));
             this.setState({
               isLoading: false,
             });
@@ -261,7 +242,10 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
   };
 
   render() {
-    const { isOpen, modalProps: { message, buttonLabel } } = this.props;
+    const {
+      isOpen,
+      modalProps: { message, buttonLabel },
+    } = this.props;
     const styles = modalStyles();
 
     return (
@@ -305,10 +289,9 @@ const DeleteDoubleCheckModalWithMutations = compose(
   deleteCommunityMutation,
   deleteChannelMutation,
   deleteThreadMutation,
-  disableCommunityAnalytics,
   deleteMessage,
-  cancelSubscription,
   archiveChannel,
+  removeCommunityMember,
   withRouter
 )(DeleteDoubleCheckModal);
 

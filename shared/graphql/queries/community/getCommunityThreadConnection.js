@@ -15,7 +15,11 @@ export type GetCommunityThreadConnectionType = {
 };
 
 const LoadMoreThreads = gql`
-  query loadMoreCommunityThreads($after: String, $id: ID) {
+  query loadMoreCommunityThreads(
+    $after: String
+    $id: ID
+    $sort: CommunityThreadConnectionSort
+  ) {
     community(id: $id) {
       ...communityInfo
       ...communityThreadConnection
@@ -27,7 +31,11 @@ const LoadMoreThreads = gql`
 `;
 
 export const getCommunityThreadConnectionQuery = gql`
-  query getCommunityThreadConnection($id: ID, $after: String) {
+  query getCommunityThreadConnection(
+    $id: ID
+    $after: String
+    $sort: CommunityThreadConnectionSort
+  ) {
     community(id: $id) {
       ...communityInfo
       ...communityThreadConnection
@@ -48,6 +56,7 @@ const getCommunityThreadConnectionOptions = {
       community,
       networkStatus,
       subscribeToMore,
+      refetch,
     },
   }) => ({
     data: {
@@ -55,6 +64,7 @@ const getCommunityThreadConnectionOptions = {
       loading,
       networkStatus,
       community,
+      refetch,
       threadConnection: community && community.threadConnection,
       threads:
         community && community.threadConnection
@@ -69,7 +79,8 @@ const getCommunityThreadConnectionOptions = {
         return subscribeToMore({
           document: subscribeToUpdatedThreads,
           updateQuery: (prev, { subscriptionData }) => {
-            const updatedThread = subscriptionData.data.threadUpdated;
+            const updatedThread =
+              subscriptionData.data && subscriptionData.data.threadUpdated;
             if (!updatedThread) return prev;
 
             const thisCommunityId = ownProps.community.id;
@@ -134,10 +145,19 @@ const getCommunityThreadConnectionOptions = {
         }),
     },
   }),
-  options: ({ id, after }: { id: string, after?: ?string }) => ({
+  options: ({
+    id,
+    after,
+    sort,
+  }: {
+    id: string,
+    after?: ?string,
+    sort?: ?string,
+  }) => ({
     variables: {
       id,
       after: after || null,
+      sort,
     },
     fetchPolicy: 'cache-and-network',
   }),

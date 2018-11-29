@@ -12,8 +12,12 @@ import receiveNotifications from './receiveNotifications';
 import messageConnection from './messageConnection';
 import author from './author';
 import creator from './creator';
-import messageCount from './messageCount';
 import currentUserLastSeen from './currentUserLastSeen';
+import content from './content';
+import reactions from './reactions';
+import metaImage from './metaImage';
+
+import type { DBThread } from 'shared/types';
 
 module.exports = {
   Query: {
@@ -31,7 +35,10 @@ module.exports = {
     messageConnection,
     author,
     creator, // deprecated
-    messageCount,
     currentUserLastSeen,
+    content,
+    reactions,
+    metaImage,
+    messageCount: ({ messageCount }: DBThread) => messageCount || 0,
   },
 };

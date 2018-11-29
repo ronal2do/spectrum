@@ -1,114 +1,98 @@
 // @flow
+import theme from 'shared/theme';
 import styled from 'styled-components';
-import { Tooltip } from '../globals';
+import { Tooltip, Truncate } from '../globals';
 
 export const Content = styled.div`
-  border-bottom: 1px solid ${props => props.theme.bg.wash};
+  border-bottom: 1px solid ${theme.bg.wash};
   padding: 12px 0;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
 `;
 
 export const Row = styled.div`
-  background: ${props => props.theme.bg.default};
+  display: grid;
+  grid-template-columns: ${props =>
+      props.avatarSize ? `${props.avatarSize}px` : '32px'} minmax(0px, 1fr) 32px;
+  grid-template-rows: ${props =>
+    props.multiAction ? '1fr auto auto' : '1fr auto'};
+  grid-template-areas: ${props =>
+    props.multiAction
+      ? `'avatar name message' 'action action action' '. description .'`
+      : `'avatar name action' '. description .'`};
+  grid-column-gap: 16px;
+  padding: 12px 16px;
   width: 100%;
-  margin-left: -16px;
-  margin-right: -16px;
-  width: calc(100% + 32px);
-  padding-left: 16px;
-  padding-right: 16px;
-
-  &:hover {
-    background: ${props => props.theme.bg.wash};
-  }
+  background: ${theme.bg.default};
+  border-bottom: 1px solid ${theme.bg.wash};
 
   &:last-of-type {
     > ${Content} {
       border-bottom: 0;
     }
   }
-`;
 
-export const AvatarContent = styled.div`
-  display: flex;
-  align-self: flex-start;
-  justify-content: center;
-  margin-right: 16px;
-  padding-top: 4px;
-`;
-
-export const MetaContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  flex: auto;
-  padding-right: 24px;
+  > div {
+    align-self: center;
+  }
 
   > a {
-    width: 100%;
+    grid-area: name;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: center;
+
+    > span {
+      ${Truncate};
+      max-width: 100%;
+    }
   }
 `;
 
-export const NameContent = styled.div`
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-`;
-
-export const Name = styled.h3`
-  color: ${props => props.theme.text.default};
-  font-size: 15px;
+export const Name = styled.span`
+  color: ${theme.text.default};
+  font-size: 16px;
   font-weight: 600;
-  margin-right: 6px;
   line-height: 1.2;
-
-  &:hover {
-    color: ${props => props.theme.brand.alt};
-  }
-`;
-
-export const Username = styled.h4`
-  font-size: 14px;
-  color: ${props => props.theme.text.alt};
-  font-weight: 400;
-  margin-right: 8px;
-  line-height: 1.1;
-
-  &:hover {
-    color: ${props => props.theme.text.default};
-  }
-`;
-
-export const BadgeContent = styled.div`
+  vertical-align: middle;
   display: flex;
-  justify-content: flex-start;
-  margin-top: 4px;
+  align-items: center;
+
+  &:hover {
+    color: ${theme.brand.alt};
+  }
+`;
+
+export const Username = styled.span`
+  font-size: 14px;
+  color: ${theme.text.alt};
+  font-weight: 400;
+  margin: 0px 4px;
+  line-height: 1;
+
+  &:hover {
+    color: ${theme.text.default};
+  }
 `;
 
 export const Description = styled.p`
+  grid-area: description;
   font-size: 14px;
-  margin-bottom: 2px;
-  color: ${props => props.theme.text.alt};
-`;
-
-export const Website = styled.p`
-  display: block;
-  color: ${props => props.theme.text.alt};
-  font-size: 14px;
-
-  &:hover {
-    color: ${props => props.theme.text.default};
-  }
+  color: ${theme.text.alt};
 `;
 
 export const MessageIcon = styled.div`
-  color: ${props => props.theme.brand.alt};
+  grid-area: message;
+  height: 32px;
+  color: ${theme.brand.alt};
   cursor: pointer;
-  ${Tooltip} top: 2px;
+  ${Tooltip};
 `;
 
 export const Actions = styled.div`
+  grid-area: action;
   display: flex;
   flex-direction: column;
   align-items: flex-end;

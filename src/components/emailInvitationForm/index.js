@@ -3,14 +3,14 @@ import * as React from 'react';
 import compose from 'recompose/compose';
 import { connect } from 'react-redux';
 import Textarea from 'react-textarea-autosize';
-import { addToastWithTimeout } from '../../actions/toasts';
+import { addToastWithTimeout } from 'src/actions/toasts';
 import Icon from '../icons';
 import isEmail from 'validator/lib/isEmail';
 import sendCommunityEmailInvitations from 'shared/graphql/mutations/community/sendCommunityEmailInvites';
-// import sendChannelEmailInvitations from 'shared/graphql/mutations/community/sendCommunityEmailInvites';
 import { Button } from '../buttons';
 import { Error } from '../formElements';
-import { SectionCardFooter } from '../settingsViews/style';
+import { SectionCardFooter } from 'src/components/settingsViews/style';
+import { withCurrentUser } from 'src/components/withCurrentUser';
 import {
   EmailInviteForm,
   EmailInviteInput,
@@ -22,7 +22,7 @@ import {
 
 type Props = {
   id: string,
-  dispatch: Function,
+  dispatch: Dispatch<Object>,
   currentUser: Object,
   sendEmailInvites: Function,
 };
@@ -315,16 +315,8 @@ class EmailInvitationForm extends React.Component<Props, State> {
   }
 }
 
-const map = state => ({ currentUser: state.users.currentUser });
-
 export const CommunityInvitationForm = compose(
-  // $FlowIssue
-  connect(map),
-  sendCommunityEmailInvitations
+  withCurrentUser,
+  sendCommunityEmailInvitations,
+  connect()
 )(EmailInvitationForm);
-
-// export const ChannelInvitationForm = compose(
-//   // $FlowIssue
-//   connect(map),
-//   sendChannelEmailInvitations
-// )(EmailInvitationForm);

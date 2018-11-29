@@ -1,18 +1,20 @@
 //@flow
 import React, { Component } from 'react';
-import { UserListItem } from '../../../components/listItems';
+import { connect } from 'react-redux';
 import compose from 'recompose/compose';
-import { Loading } from '../../../components/loading';
+import { Loading } from 'src/components/loading';
 import getChannelMembersQuery from 'shared/graphql/queries/channel/getChannelMemberConnection';
 import type { GetChannelMemberConnectionType } from 'shared/graphql/queries/channel/getChannelMemberConnection';
-import { FetchMoreButton } from '../../../components/threadFeed/style';
-import ViewError from '../../../components/viewError';
-import viewNetworkHandler from '../../../components/viewNetworkHandler';
-import {
-  SectionCard,
-  SectionTitle,
-} from '../../../components/settingsViews/style';
-import { ListContainer, ListFooter } from '../../../components/listItems/style';
+import { FetchMoreButton } from 'src/components/threadFeed/style';
+import ViewError from 'src/components/viewError';
+import viewNetworkHandler from 'src/components/viewNetworkHandler';
+import GranularUserProfile from 'src/components/granularUserProfile';
+import { SectionCard, SectionTitle } from 'src/components/settingsViews/style';
+import { MessageIconContainer, UserListItemContainer } from '../style';
+import { ListContainer, ListFooter } from 'src/components/listItems/style';
+import Icon from 'src/components/icons';
+import type { Dispatch } from 'redux';
+import { withCurrentUser } from 'src/components/withCurrentUser';
 
 type Props = {
   data: {
@@ -21,6 +23,9 @@ type Props = {
   },
   isLoading: boolean,
   isFetchingMore: boolean,
+  dispatch: Dispatch<Object>,
+  initMessage: Function,
+  currentUser: ?Object,
 };
 
 class ChannelMembers extends Component<Props> {
@@ -30,6 +35,8 @@ class ChannelMembers extends Component<Props> {
       data,
       isLoading,
       isFetchingMore,
+      currentUser,
+      initMessage,
     } = this.props;
 
     if (data && data.channel) {
@@ -52,27 +59,46 @@ class ChannelMembers extends Component<Props> {
               members.map(user => {
                 if (!user) return null;
                 return (
-                  <section key={user.id}>
-                    <UserListItem
-                      user={user}
-                      reputationTipText={'Rep in this community'}
-                    />
-                  </section>
+                  <UserListItemContainer key={user.id}>
+                    <GranularUserProfile
+                      userObject={user}
+                      id={user.id}
+                      name={user.name}
+                      username={user.username}
+                      isCurrentUser={currentUser && user.id === currentUser.id}
+                      isOnline={user.isOnline}
+                      profilePhoto={user.profilePhoto}
+                      avatarSize={40}
+                      description={user.description}
+                      showHoverProfile={false}
+                    >
+                      {currentUser &&
+                        user.id !== currentUser.id && (
+                          <MessageIconContainer>
+                            <Icon
+                              glyph={'message'}
+                              onClick={() => initMessage(user)}
+                            />
+                          </MessageIconContainer>
+                        )}
+                    </GranularUserProfile>
+                  </UserListItemContainer>
                 );
               })}
           </ListContainer>
 
-          {channel.memberConnection.pageInfo.hasNextPage && (
-            <ListFooter>
-              <FetchMoreButton
-                color={'brand.default'}
-                loading={isFetchingMore}
-                onClick={() => fetchMore()}
-              >
-                Load more
-              </FetchMoreButton>
-            </ListFooter>
-          )}
+          {channel.memberConnection &&
+            channel.memberConnection.pageInfo.hasNextPage && (
+              <ListFooter>
+                <FetchMoreButton
+                  color={'brand.default'}
+                  loading={isFetchingMore}
+                  onClick={() => fetchMore()}
+                >
+                  Load more
+                </FetchMoreButton>
+              </ListFooter>
+            )}
         </SectionCard>
       );
     }
@@ -93,6 +119,9 @@ class ChannelMembers extends Component<Props> {
   }
 }
 
-export default compose(getChannelMembersQuery, viewNetworkHandler)(
-  ChannelMembers
-);
+export default compose(
+  getChannelMembersQuery,
+  withCurrentUser,
+  viewNetworkHandler,
+  connect()
+)(ChannelMembers);

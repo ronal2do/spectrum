@@ -3,24 +3,20 @@ import * as React from 'react';
 import { withRouter } from 'react-router';
 import compose from 'recompose/compose';
 import { connect } from 'react-redux';
-import Avatar from '../avatar';
-import Link from '../link';
-import Reputation from '../reputation';
-import Badge from '../badges';
-import Icon from '../icons';
-import { initNewThreadWithUser } from '../../actions/directMessageThreads';
-import addProtocolToString from 'shared/normalize-url';
+import { UserHoverProfile } from 'src/components/hoverProfile';
+import { UserAvatar } from 'src/components/avatar';
+import Link from 'src/components/link';
+import Reputation from 'src/components/reputation';
+import Badge from 'src/components/badges';
+import Icon from 'src/components/icons';
+import { initNewThreadWithUser } from 'src/actions/directMessageThreads';
+import type { Dispatch } from 'redux';
+import ConditionalWrap from 'src/components/conditionalWrap';
 import {
   Row,
-  Content,
-  MetaContent,
-  AvatarContent,
-  NameContent,
   Name,
   Username,
-  BadgeContent,
   Description,
-  Website,
   MessageIcon,
   Actions,
 } from './style';
@@ -28,7 +24,7 @@ import {
 type Props = {
   userObject: Object,
   id: string,
-  avatarSize?: string,
+  avatarSize?: number,
   profilePhoto?: string,
   name?: string,
   username?: ?string,
@@ -38,12 +34,15 @@ type Props = {
   isCurrentUser?: boolean,
   reputation?: number,
   messageButton?: boolean,
+  multiAction?: boolean,
   children?: React.Node,
-  isOnline?: boolean,
-  onlineSize?: 'small' | 'large',
   history: Object,
-  dispatch: Function,
+  dispatch: Dispatch<Object>,
+  showHoverProfile?: boolean,
 };
+
+// Each prop both provides data AND indicates that the element should be included in the instance of the profile,
+// so each instance must manually call out which pieces of the profile it wants included.
 
 const LinkHandler = ({
   username,
@@ -52,6 +51,27 @@ const LinkHandler = ({
   username: ?string,
   children: React.Node,
 }) => (username ? <Link to={`/users/${username}`}>{children}</Link> : children);
+
+class GranularUserProfileHandler extends React.Component<Props> {
+  render() {
+    const { showHoverProfile = true, userObject } = this.props;
+    return (
+      <ConditionalWrap
+        condition={showHoverProfile && !!userObject.username}
+        wrap={() => (
+          <UserHoverProfile
+            username={userObject.username}
+            style={{ flex: '1 1 auto' }}
+          >
+            <GranularUserProfile {...this.props} />
+          </UserHoverProfile>
+        )}
+      >
+        <GranularUserProfile {...this.props} />
+      </ConditionalWrap>
+    );
+  }
+}
 
 class GranularUserProfile extends React.Component<Props> {
   initMessage = () => {
@@ -65,85 +85,58 @@ class GranularUserProfile extends React.Component<Props> {
   render() {
     const {
       userObject,
-      avatarSize,
       profilePhoto,
       name,
       username,
       description,
-      website,
-      badges,
       reputation,
+      avatarSize = 32,
+      badges,
       children,
       messageButton,
-      isOnline,
-      onlineSize,
+      multiAction,
+      showHoverProfile = true,
     } = this.props;
 
     return (
-      <Row>
-        <Content>
-          {profilePhoto && (
-            <AvatarContent>
-              <LinkHandler username={userObject.username}>
-                <Avatar
-                  src={profilePhoto}
-                  size={avatarSize || '32'}
-                  isOnline={isOnline}
-                  onlineSize={onlineSize}
-                />
-              </LinkHandler>
-            </AvatarContent>
+      <Row avatarSize={avatarSize} multiAction={multiAction}>
+        {profilePhoto && (
+          <UserAvatar
+            user={userObject}
+            size={avatarSize}
+            showHoverProfile={!showHoverProfile}
+          />
+        )}
+        <LinkHandler username={userObject.username}>
+          {name && (
+            <Name>
+              {name}
+              {username && <Username>@{username}</Username>}
+              {badges && badges.map((b, i) => <Badge key={i} type={b} />)}
+            </Name>
           )}
 
-          <MetaContent>
-            <LinkHandler username={userObject.username}>
-              {name && (
-                <NameContent>
-                  <Name>{name}</Name>
-
-                  {username && <Username>@{username}</Username>}
-
-                  {badges && (
-                    <BadgeContent>
-                      {badges.map((b, i) => <Badge key={i} type={b} />)}
-                    </BadgeContent>
-                  )}
-                </NameContent>
-              )}
-
-              {typeof reputation === 'number' && (
-                <Reputation reputation={reputation} />
-              )}
-
-              {description && <Description>{description}</Description>}
-            </LinkHandler>
-
-            {website && (
-              <Website>
-                <a href={addProtocolToString(website)} target={'_blank'}>
-                  {website}
-                </a>
-              </Website>
-            )}
-          </MetaContent>
-
-          <Actions>
-            {messageButton && (
-              <MessageIcon
-                tipText={name ? `Message ${name}` : 'Message'}
-                tipLocation={'top-left'}
-                onClick={this.initMessage}
-              >
-                <Icon glyph="message-new" size={32} />
-              </MessageIcon>
-            )}
-
-            {children}
-          </Actions>
-        </Content>
+          {typeof reputation === 'number' && (
+            <Reputation reputation={reputation} />
+          )}
+        </LinkHandler>
+        {description && <Description>{description}</Description>}
+        {messageButton && (
+          <MessageIcon
+            tipText={name ? `Message ${name}` : 'Message'}
+            tipLocation={'top-left'}
+            onClick={this.initMessage}
+          >
+            <Icon glyph="message-new" size={32} />
+          </MessageIcon>
+        )}
+        <Actions>{children}</Actions>
       </Row>
     );
   }
 }
 
-export default compose(connect(), withRouter)(GranularUserProfile);
+export default compose(
+  connect(),
+  withRouter
+)(GranularUserProfileHandler);
